@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -80,10 +79,9 @@ const DashboardGrid = styled.div`
   align-items: start;
 `;
 
-const CardsGrid = styled.div<{ $hasExpanded: boolean }>`
+const CardsGrid = styled.div`
   display: grid;
-  grid-template-columns: ${(props) =>
-    props.$hasExpanded ? "1fr" : "repeat(2, 1fr)"};
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
 `;
 
@@ -535,7 +533,7 @@ const CompleteDashboardWithReg1: React.FC = () => {
         </PageHeader>
 
         <DashboardGrid>
-          <CardsGrid $hasExpanded={expandedCard !== null}>
+          <CardsGrid>
             {data.cards.map((card) => (
               <DashboardCard
                 key={card.id}
@@ -557,6 +555,3 @@ const CompleteDashboardWithReg1: React.FC = () => {
 };
 
 export default CompleteDashboardWithReg1;
-
-
-
