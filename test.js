@@ -81,7 +81,7 @@ const DashboardGrid = styled.div`
 
 const CardsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1rem;
 `;
 
@@ -96,16 +96,17 @@ const Card = styled(RoundedBox)<{
   transition: all 0.3s ease;
   min-height: 120px;
 
+  /* Weekly Summary and Expanded cards always take full width */
   ${(props) =>
-    props.$isWeeklySummary &&
+    (props.$isWeeklySummary || props.$expanded) &&
     `
     grid-column: 1 / -1;
   `}
 
+  /* Special styling for expanded cards */
   ${(props) =>
     props.$expanded &&
     `
-    grid-column: 1 / -1;
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   `}
