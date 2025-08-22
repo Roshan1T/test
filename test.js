@@ -81,8 +81,23 @@ const DashboardGrid = styled.div`
 
 const CardsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
+  
+  /* Make grid items auto-fit and smart */
+  & > * {
+    grid-column: span 1; /* Default: take 1 column */
+  }
+  
+  /* Weekly Summary and Expanded cards take full width */
+  & > *[data-full-width="true"] {
+    grid-column: 1 / -1;
+  }
+  
+  /* Handle odd items automatically - last item in row takes remaining space */
+  & > *:nth-child(odd):last-child:not([data-full-width="true"]) {
+    grid-column: 1 / -1;
+  }
 `;
 
 const Card = styled(RoundedBox)<{
@@ -91,17 +106,10 @@ const Card = styled(RoundedBox)<{
   $isWeeklySummary: boolean;
 }>`
   border-top: 3px solid ${(props) => props.$borderColor};
-  padding: 1rem;
+  padding: ${(props) => (props.$expanded ? "1.5rem" : "1.25rem")};
   cursor: pointer;
   transition: all 0.3s ease;
   min-height: 120px;
-
-  /* Weekly Summary and Expanded cards always take full width */
-  ${(props) =>
-    (props.$isWeeklySummary || props.$expanded) &&
-    `
-    grid-column: 1 / -1;
-  `}
 
   /* Special styling for expanded cards */
   ${(props) =>
@@ -348,6 +356,20 @@ const TimePeriodSelector: React.FC<{
     { id: "3months", label: "Quarter" },
   ];
 
+  const handleTabChange: React.Dispatch<
+    React.SetStateAction<string | number>
+  > = (value) => {
+    if (typeof value === "string") {
+      onFilterChange(value);
+    } else if (typeof value === "function") {
+      // Handle function case for SetStateAction
+      const result = value(activeFilter);
+      if (typeof result === "string") {
+        onFilterChange(result);
+      }
+    }
+  };
+
   return (
     <VerticalFlexbox style={{ alignItems: "center", gap: "0.75rem" }}>
       <FieldLabel style={{ fontSize: "0.875rem", margin: 0 }}>
@@ -355,9 +377,7 @@ const TimePeriodSelector: React.FC<{
       </FieldLabel>
       <Tabs
         activeTab={activeFilter}
-        setActiveTab={(value) =>
-          typeof value === "string" && onFilterChange(value)
-        }
+        setActiveTab={handleTabChange}
         data={timePeriods}
         variant="primary"
       />
@@ -365,11 +385,14 @@ const TimePeriodSelector: React.FC<{
   );
 };
 
-const DashboardCard: React.FC<{
+interface DashboardCardProps {
   card: CardData;
   expanded: boolean;
   onToggle: () => void;
-}> = ({ card, expanded, onToggle }) => {
+  dataFullWidth?: boolean;
+}
+
+const DashboardCard: React.FC<DashboardCardProps> = ({ card, expanded, onToggle, dataFullWidth }) => {
   const displayContent = expanded
     ? card.content
     : truncateContent(card.content);
@@ -379,6 +402,7 @@ const DashboardCard: React.FC<{
       $borderColor={card.borderColor}
       $expanded={expanded}
       $isWeeklySummary={!!card.isWeeklySummary}
+      data-full-width={dataFullWidth ? "true" : "false"}
       onClick={onToggle}
     >
       <CardHeader>
@@ -477,7 +501,7 @@ const MetricsCard: React.FC<{ metrics: DashboardData["metrics"] }> = ({
 
 const CompleteDashboardWithReg1: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState("7days");
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -499,11 +523,19 @@ const CompleteDashboardWithReg1: React.FC = () => {
 
   const handlePeriodChange = (period: string) => {
     setSelectedPeriod(period);
-    setExpandedCard(null);
+    setExpandedCards(new Set()); // Clear all expanded cards when period changes
   };
 
   const handleCardToggle = (cardId: string) => {
-    setExpandedCard(expandedCard === cardId ? null : cardId);
+    setExpandedCards((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardId)) {
+        newSet.delete(cardId); // Collapse card if it's expanded
+      } else {
+        newSet.add(cardId); // Expand card if it's collapsed
+      }
+      return newSet;
+    });
   };
 
   if (loading || !data) {
@@ -515,6 +547,34 @@ const CompleteDashboardWithReg1: React.FC = () => {
       </PageContainer>
     );
   }
+
+  // Smart full-width logic for lonely cards using .map
+  let prevWasFullWidth = true;
+  const renderedCards = data.cards.map((card, i) => {
+    const expanded = expandedCards.has(card.id);
+    const isFullWidth = !!card.isWeeklySummary || expanded;
+    let forceFullWidth = false;
+
+    // If previous was full-width, this card is alone on a row
+    if (!isFullWidth && prevWasFullWidth) {
+      const next = data.cards[i + 1];
+      if (!next || !!next.isWeeklySummary || expandedCards.has(next.id)) {
+        forceFullWidth = true;
+      }
+    }
+
+    prevWasFullWidth = isFullWidth || forceFullWidth;
+
+    return (
+      <DashboardCard
+        key={card.id}
+        card={card}
+        expanded={expanded}
+        onToggle={() => handleCardToggle(card.id)}
+        dataFullWidth={isFullWidth || forceFullWidth}
+      />
+    );
+  });
 
   return (
     <PageContainer>
@@ -535,14 +595,7 @@ const CompleteDashboardWithReg1: React.FC = () => {
 
         <DashboardGrid>
           <CardsGrid>
-            {data.cards.map((card) => (
-              <DashboardCard
-                key={card.id}
-                card={card}
-                expanded={expandedCard === card.id}
-                onToggle={() => handleCardToggle(card.id)}
-              />
-            ))}
+            {renderedCards}
           </CardsGrid>
 
           <Sidebar>
