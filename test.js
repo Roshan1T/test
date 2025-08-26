@@ -587,3 +587,25 @@ You are a highly qualified Environmental, Social and Governance (ESG) specialist
 # Your response should be a comprehensive consolidated ESG report covering all environmental, social, and governance information from the chunks.
 """
 
+ESG_COMPREHENSIVE_KEYWORDS = [
+    "environmental",
+    "sustainability", 
+    "governance",
+    "climate",
+    "ESG",
+    "compliance",
+    "disclosure",
+    "social responsibility",
+    "carbon",
+    "renewable",
+    "transparency",
+    "accountability",
+    "risk management",
+    "reporting",
+    "ethics",
+    "human rights",
+    "diversity",
+    "energy",
+    "pollution",
+    "conservation"
+]
