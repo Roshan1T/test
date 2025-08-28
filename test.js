@@ -1135,3 +1135,110 @@ You are a senior Data Protection Officer (DPO Supervisor) responsible for consol
 
 
 
+
+
+
+
+
+
+
+
+
+from flask import Flask, request, jsonify
+from flask_cors import cross_origin
+from datetime import datetime, timedelta
+import re
+from generate_reports import main as generate_reports, normalize, canvas_col
+
+app = Flask(__name__)
+dpo = app  # Assuming dpo is your Flask app instance
+
+# Assuming you have these imports and setup from your existing code
+# from src import logger
+# collection = canvas_col  # Your MongoDB collection
+
+def log(func):
+    """Decorator for logging"""
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+@dpo.route('/dpo', methods=['POST'])
+@cross_origin()
+@log
+def get_documents():
+    data = request.get_json()
+    print(data)
+    
+    days = data.get('days', 7)
+    jurisdictions = data.get('jurisdictions', [])
+    print(f"Days is : {days}, jurisdictions is :{jurisdictions}")
+    
+    end_datetime = datetime.today()
+    start_datetime = end_datetime - timedelta(days=days)
+    
+    # Normalize jurisdictions to handle both single and multiple jurisdictions
+    if jurisdictions and not isinstance(jurisdictions, list):
+        jurisdictions = [jurisdictions]
+    
+    # Generate reports first to ensure they exist
+    try:
+        print("Generating reports for given filters...")
+        # logger.info(f"Generating reports for given filters : days:{days} and jurisdiction : {jurisdictions}")
+        generate_reports(days=days, jurisdiction=jurisdictions)
+        
+        # Query for the generated reports
+        documents = []
+        
+        # For multiple jurisdictions, we expect:
+        # - Country reports for each jurisdiction  
+        # - One overall multi-country report
+        if isinstance(jurisdictions, list) and len(jurisdictions) > 1:
+            # Get country reports for each jurisdiction
+            for jurisdiction in jurisdictions:
+                jurisdiction_part = normalize(jurisdiction)
+                country_query = {
+                    "start_date": start_datetime.strftime("%Y-%m-%d"),
+                    "end_date": end_datetime.strftime("%Y-%m-%d"),
+                    "jurisdiction": jurisdiction,
+                    "report_type": "country_report"
+                }
+                country_docs = list(canvas_col.find(country_query))
+                documents.extend(country_docs)
+            
+            # Get overall multi-country report
+            jurisdiction_part = "_".join(sorted(normalize(j) for j in jurisdictions))
+            overall_query = {
+                "start_date": start_datetime.strftime("%Y-%m-%d"),
+                "end_date": end_datetime.strftime("%Y-%m-%d"),
+                "report_type": "overall_report",
+                "multi_country": True
+            }
+            overall_docs = list(canvas_col.find(overall_query))
+            documents.extend(overall_docs)
+            
+        else:
+            # Single jurisdiction or all jurisdictions - original logic
+            query = {
+                "start_date": start_datetime.strftime("%Y-%m-%d"),
+                "end_date": end_datetime.strftime("%Y-%m-%d")
+            }
+            
+            if jurisdictions:
+                jurisdiction_value = jurisdictions[0] if isinstance(jurisdictions, list) else jurisdictions
+                query['jurisdiction'] = jurisdiction_value
+            else:
+                query['jurisdiction'] = None
+            
+            documents = list(canvas_col.find(query))
+        
+        return jsonify(success=True, data=documents, total_reports=len(documents))
+        
+    except Exception as e:
+        # logger.exception(f"error processing user request : {e}")
+        print(f"Error processing user request: {e}")
+        return jsonify(success=False, message="Error while creating report"), 404
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
