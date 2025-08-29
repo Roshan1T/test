@@ -10,131 +10,148 @@ import { openModal } from "react-url-modal";
 // styling 
 const CitationsWrapper = styled.div`
   display: flex;
-  /* grid-template-columns: repeat(3, 1fr); */
-  gap: 0.5rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
+  margin-top: 1.5rem;
 `;
 
-
-const CardContainer = styled(RoundedBox) <{
+const CardContainer = styled.div<{
   $borderColor: string;
   $expanded: boolean;
   $isWeeklySummary: boolean;
 }>`
-  border-top: ${(props) => props.$expanded ? 'none' : `3px solid ${props.$borderColor}`};
-  padding: ${(props) => (props.$expanded ? "0" : "1.25rem")};
-  cursor: ${(props) => props.$expanded ? 'default' : 'pointer'};
+  border-top: ${(props: any) => props.$expanded ? 'none' : `3px solid ${props.$borderColor}`};
+  padding: ${(props: any) => (props.$expanded ? "0" : "1.25rem")};
+  cursor: ${(props: any) => props.$expanded ? 'default' : 'pointer'};
   transition: all 0.3s ease;
-  min-height: ${(props) => props.$expanded ? 'auto' : '120px'};
-  background: ${(props) => props.$expanded ? 'transparent' : 'inherit'};
-  box-shadow: ${(props) => props.$expanded ? 'none' : 'inherit'};
+  min-height: ${(props: any) => props.$expanded ? 'auto' : '120px'};
+  background: ${(props: any) => props.$expanded ? 'transparent' : '#ffffff'};
+  box-shadow: ${(props: any) => props.$expanded ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.1)'};
+  border-radius: ${(props: any) => props.$expanded ? '0' : '8px'};
+  border: ${(props: any) => props.$expanded ? 'none' : '1px solid #e2e8f0'};
 
-  ${(props) =>
+  ${(props: any) =>
     !props.$expanded &&
     `
     &:hover {
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: #3b82f6;
     }
   `}
 `;
 
-const CardHeader = styled(HorizontalFlexbox)`
+const CardHeader = styled.div`
+  display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
 `;
 
-const CardTitleSection = styled(HorizontalFlexbox)`
+const CardTitleSection = styled.div`
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 `;
 
 const IconBox = styled.div<{ $color?: string }>`
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
-  background: ${(props) => (props.$color ? `${props.$color}20` : "#f3f4f6")};
+  background: ${(props: any) => (props.$color ? `${props.$color}15` : "#f1f5f9")};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${(props) => props.$color || "#6b7280"};
+  color: ${(props: any) => props.$color || "#64748b"};
 `;
 
-const CardTitle = styled(TextLabel)`
-  font-size: 1.1rem;
+const CardTitle = styled.h3`
+  font-size: 1rem;
   font-weight: 600;
   margin: 0;
+  color: #1e293b;
 `;
 
 const ExpandBtn = styled.button`
-  background: transparent;
-  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: #64748b;
   cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
 `;
 
 const ContentArea = styled.div`
-padding: 0 0;
   font-size: 0.9rem;
-  line-height: 1.6;
+  line-height: 1.7;
+  color: #374151;
 `;
 
-
-
-
 const StyledH1 = styled.h1`
-  font-size: 1.5rem;
-  border-bottom: 2px solid #ccc;
-  padding-bottom: 0.4rem;
-  margin-bottom: 1rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+  margin: 0 0 1.5rem 0;
 `;
 
 const StyledH2 = styled.h2`
-  font-size: 1.4rem;
-  color: #003366;
-  margin-top: 2rem;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 0.3rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 2rem 0 1rem 0;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.5rem;
 `;
 
 const StyledH3 = styled.h3`
-  font-size: 1.3rem;
-  margin-top: 1.5rem;
-  color: #004b6e;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 1.5rem 0 1rem 0;
 `;
 
 const StyledH4 = styled.h4`
-  font-size: 1.1rem;
-  margin-top: 1.2rem;
-  color: #555;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 1.25rem 0 0.75rem 0;
 `;
 
 const StyledH5 = styled.h5`
   font-size: 1rem;
-  margin-top: 1rem;
-  color: #666;
+  font-weight: 600;
+  color: #4b5563;
+  margin: 1rem 0 0.75rem 0;
 `;
 
 const StyledH6 = styled.h6`
   font-size: 0.95rem;
-  margin-top: 1rem;
-  color: #777;
+  font-weight: 600;
+  color: #4b5563;
+  margin: 1rem 0 0.75rem 0;
 `;
 
 const StyledP = styled.p`
   line-height: 1.7;
   margin: 1rem 0;
+  color: #374151;
 `;
 
 const StyledStrong = styled.strong`
-  font-weight: bold;
+  font-weight: 600;
+  color: #1e293b;
 `;
 
 const StyledEm = styled.em`
@@ -143,56 +160,67 @@ const StyledEm = styled.em`
 
 const StyledDel = styled.del`
   text-decoration: line-through;
+  opacity: 0.7;
 `;
-
 
 const StyledBlockquote = styled.blockquote`
   margin: 1.5rem 0;
-  padding-left: 1rem;
-  border-left: 4px solid #ccc;
-  color: #555;
+  padding: 1rem 1.5rem;
+  border-left: 4px solid #3b82f6;
+  background-color: #f8fafc;
+  color: #4b5563;
   font-style: italic;
+  border-radius: 0 6px 6px 0;
 `;
 
 const StyledHr = styled.hr`
   border: none;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #e2e8f0;
   margin: 2rem 0;
 `;
 
 const StyledUl = styled.ul`
-  margin: 1rem 0 1rem 1.5rem;
+  margin: 1rem 0;
+  padding-left: 1.5rem;
   list-style-type: disc;
 `;
 
 const StyledOl = styled.ol`
-  margin: 1rem 0 1rem 1.5rem;
+  margin: 1rem 0;
+  padding-left: 1.5rem;
   list-style-type: decimal;
 `;
 
 const StyledLi = styled.li`
   margin: 0.5rem 0;
+  line-height: 1.6;
 `;
-
 
 const StyledTable = styled.table`
   width: 100%;
   border-collapse: collapse;
   margin: 1.5rem 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  background-color: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 `;
 
 const StyledTh = styled.th`
-  border: 1px solid #ccc;
-  background-color: #f2f2f2;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
   padding: 0.75rem;
   text-align: left;
+  font-weight: 600;
+  color: #374151;
 `;
 
 const StyledTd = styled.td`
-  border: 1px solid #ccc;
+  border: 1px solid #e2e8f0;
   padding: 0.75rem;
   text-align: left;
+  color: #4b5563;
 `;
 
 const CitationTitle = styled.span`
@@ -202,6 +230,7 @@ const CitationTitle = styled.span`
   font-size: 0.8rem;
   text-align: left;
 `;
+
 const CitationButton = styled.button`
   max-width: 350px;
   min-width: 150px;
@@ -209,16 +238,30 @@ const CitationButton = styled.button`
   text-overflow: ellipsis;
   white-space: nowrap;
   justify-content: flex-start;
-  background-color: transparent;
-  border: none;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
   cursor: pointer;
-  border: 1px solid #e5e7eb;
   padding: 0.5rem 1rem;
-  border-radius: 5rem;
-  transition: all 0.2s ease-in-out;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-size: 0.8rem;
+  color: #374151;
+
   &:hover {
-    background-color: ${(props) => props.theme.hoverColor};
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
+`;
+
+const CitationsHeader = styled.h4`
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 2rem 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
 `;
 
 
@@ -398,10 +441,10 @@ const DpoCard: React.FC<CardProps> = ({ card, data, expanded, onToggle, dataFull
         
         {expanded && content?.citation && Object.keys(content?.citation || {}).length > 0 && (
           <div>
-            <SecondaryLabel style={{ fontWeight: 500, color: theme.primaryColor }} className="ml-1 mt-4">
-              Citations
-            </SecondaryLabel>
-            <CitationsWrapper className="py-2">
+            <CitationsHeader>
+              Sources & Citations
+            </CitationsHeader>
+            <CitationsWrapper>
               {Object.entries(content?.citation || {}).map(
                 ([index, citation]) => (
                   <Citation
@@ -421,10 +464,6 @@ const DpoCard: React.FC<CardProps> = ({ card, data, expanded, onToggle, dataFull
 
 
 export default DpoCard;
-
-
-
-
 
 
 
@@ -471,112 +510,228 @@ import datas from "@constants/mockDpo";
 
 const PageContainer = styled.div`
   min-height: 100vh;
+  background-color: #f8fafc;
 `;
+
 const DashboardGrid = styled.div`
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 320px 1fr;
   gap: 0;
-  height: calc(100vh - 120px);
+  height: calc(100vh - 80px);
   overflow: hidden;
 `;
 
 const ReportSidebar = styled.div`
-  background-color: ${(props: any) => props.theme.cardBg};
-  border-right: 1px solid ${(props: any) => props.theme.borderColor};
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
   overflow-y: auto;
-  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+`;
+
+const SidebarHeader = styled.div`
+  padding: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+`;
+
+const SidebarTitle = styled.h2`
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
+`;
+
+const SidebarSubtitle = styled.p`
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+`;
+
+const ReportsContainer = styled.div`
+  flex: 1;
+  padding: 1rem;
 `;
 
 const ReportListItem = styled.div<{ $isActive: boolean }>`
-  padding: 0.75rem 1rem;
-  margin: 0.25rem 0.5rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  background-color: ${(props: any) => props.$isActive ? props.theme.primaryColor + '15' : 'transparent'};
-  border-left: ${(props: any) => props.$isActive ? `3px solid ${props.theme.primaryColor}` : '3px solid transparent'};
+  border: 1px solid ${(props: any) => props.$isActive ? '#3b82f6' : '#e2e8f0'};
+  background-color: ${(props: any) => props.$isActive ? '#eff6ff' : '#ffffff'};
+  box-shadow: ${(props: any) => props.$isActive ? '0 2px 8px rgba(59, 130, 246, 0.15)' : '0 1px 3px rgba(0, 0, 0, 0.1)'};
 
   &:hover {
-    background-color: ${(props: any) => props.theme.hoverColor};
+    border-color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
   }
 `;
 
+const ReportItemHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+`;
+
 const ReportItemTitle = styled.div<{ $isActive: boolean }>`
-  font-size: 0.9rem;
-  font-weight: ${(props: any) => props.$isActive ? '600' : '500'};
-  color: ${(props: any) => props.$isActive ? props.theme.primaryColor : props.theme.textColor};
-  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: ${(props: any) => props.$isActive ? '#1e40af' : '#1e293b'};
+`;
+
+const ReportStatusBadge = styled.span<{ $status: 'available' | 'no-data' }>`
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: ${(props: any) => props.$status === 'available' ? '#dcfce7' : '#fee2e2'};
+  color: ${(props: any) => props.$status === 'available' ? '#16a34a' : '#dc2626'};
 `;
 
 const ReportItemMeta = styled.div`
   font-size: 0.75rem;
-  color: ${(props: any) => props.theme.secondaryTextColor};
-  opacity: 0.8;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+`;
+
+const ReportItemStats = styled.div`
+  display: flex;
+  gap: 1rem;
+`;
+
+const StatItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+`;
+
+const StatLabel = styled.span`
+  font-size: 0.625rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+`;
+
+const StatValue = styled.span`
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1e293b;
 `;
 
 const MainContent = styled.div`
   overflow-y: auto;
-  padding: 1.5rem;
-  background-color: ${(props: any) => props.theme.backgroundColor};
+  background-color: #ffffff;
 `;
 
-const ReportHeader = styled.div`
-  margin-bottom: 2rem;
+const ContentHeader = styled.div`
+  padding: 2rem 2rem 1rem 2rem;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 `;
 
-const ReportTitle = styled.h1`
-  font-size: 1.5rem;
+const ContentTitle = styled.h1`
+  font-size: 1.75rem;
   font-weight: 700;
-  color: ${(props: any) => props.theme.primaryColor};
-  margin-bottom: 0.5rem;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
 `;
 
-const ReportMeta = styled.div`
+const ContentMeta = styled.div`
   display: flex;
   gap: 2rem;
-  margin-bottom: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
 `;
 
 const MetaItem = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.5rem;
 `;
 
 const MetaLabel = styled.span`
   font-size: 0.75rem;
   font-weight: 500;
-  color: ${(props: any) => props.theme.secondaryTextColor};
+  color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 `;
 
 const MetaValue = styled.span`
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: ${(props: any) => props.theme.textColor};
+  color: #1e293b;
+  padding: 0.25rem 0.75rem;
+  background-color: #f1f5f9;
+  border-radius: 6px;
+`;
+
+const PriorityBadge = styled.span<{ $priority: 'high' | 'medium' | 'low' }>`
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: ${(props: any) => {
+    switch (props.$priority) {
+      case 'high': return '#fee2e2';
+      case 'medium': return '#fef3c7';
+      default: return '#f0f9ff';
+    }
+  }};
+  color: ${(props: any) => {
+    switch (props.$priority) {
+      case 'high': return '#dc2626';
+      case 'medium': return '#d97706';
+      default: return '#0369a1';
+    }
+  }};
 `;
 
 const ReportContent = styled.div`
-  background-color: ${(props: any) => props.theme.cardBg};
-  border-radius: 12px;
   padding: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 `;
 
 const StickyTopBar = styled.div`
   position: sticky;
   top: 0;
   width: 100%;
-  padding: 0.75rem 1rem;
-  background-color: ${(props: any) => props.theme.cardBg};
+  padding: 1rem 2rem;
+  background-color: #ffffff;
   z-index: 10;
-  border-bottom: 1px solid ${(props: any) => props.theme.borderColor};
+  border-bottom: 1px solid #e2e8f0;
   backdrop-filter: blur(8px);
 `;
 
+const TopBarContent = styled.div`
+  display: flex;
+  justify-content: between;
+  align-items: center;
+`;
+
+const TopBarTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
+const TopBarActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
 const PopoverContainer = styled.div`
-  padding: 1rem;
+  padding: 1.5rem;
+  min-width: 300px;
 `;
 
 const Container = styled.div`
@@ -592,24 +747,27 @@ const PlaceholderContent = styled.div`
   justify-content: center;
   height: 100%;
   text-align: center;
-  color: ${(props: any) => props.theme.secondaryTextColor};
+  color: #64748b;
+  padding: 2rem;
 `;
 
 const PlaceholderIcon = styled.div`
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  opacity: 0.5;
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.4;
 `;
 
 const PlaceholderText = styled.div`
-  font-size: 1.1rem;
-  font-weight: 500;
+  font-size: 1.25rem;
+  font-weight: 600;
   margin-bottom: 0.5rem;
+  color: #1e293b;
 `;
 
 const PlaceholderSubtext = styled.div`
-  font-size: 0.9rem;
-  opacity: 0.7;
+  font-size: 1rem;
+  opacity: 0.8;
+  max-width: 400px;
 `;
 
 
@@ -645,29 +803,55 @@ const ReportListSidebar: React.FC<{
     
     return (
         <ReportSidebar>
-            <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
-                <TextLabel style={{ fontSize: '1rem', fontWeight: '600' }}>Reports</TextLabel>
-            </div>
-            {reportTypes.map((reportType: string) => {
-                const reportData = reports.find((r: GazetteReport) => r.reportType === reportType);
-                const cardInfo = cardData.find((c: any) => c.id === reportType);
-                const isActive = selectedReportId === reportType;
-                
-                return (
-                    <ReportListItem
-                        key={reportType}
-                        $isActive={isActive}
-                        onClick={() => onReportSelect(reportType)}
-                    >
-                        <ReportItemTitle $isActive={isActive}>
-                            {cardInfo?.title || reportType}
-                        </ReportItemTitle>
-                        <ReportItemMeta>
-                            {reportData ? `${reportData.startDate} - ${reportData.endDate}` : 'No data available'}
-                        </ReportItemMeta>
-                    </ReportListItem>
-                );
-            })}
+            <SidebarHeader>
+                <SidebarTitle>Regulatory Intelligence Feed</SidebarTitle>
+                <SidebarSubtitle>Latest updates from global regulatory sources</SidebarSubtitle>
+            </SidebarHeader>
+            
+            <ReportsContainer>
+                {reportTypes.map((reportType: string) => {
+                    const reportData = reports.find((r: GazetteReport) => r.reportType === reportType);
+                    const cardInfo = cardData.find((c: any) => c.id === reportType);
+                    const isActive = selectedReportId === reportType;
+                    const hasData = !!reportData;
+                    
+                    return (
+                        <ReportListItem
+                            key={reportType}
+                            $isActive={isActive}
+                            onClick={() => onReportSelect(reportType)}
+                        >
+                            <ReportItemHeader>
+                                <ReportItemTitle $isActive={isActive}>
+                                    {cardInfo?.title || reportType}
+                                </ReportItemTitle>
+                                <ReportStatusBadge $status={hasData ? 'available' : 'no-data'}>
+                                    {hasData ? 'ACTIVE' : 'NO DATA'}
+                                </ReportStatusBadge>
+                            </ReportItemHeader>
+                            
+                            <ReportItemMeta>
+                                {reportData ? `${reportData.startDate} - ${reportData.endDate}` : 'No data available for selected period'}
+                            </ReportItemMeta>
+                            
+                            {hasData && (
+                                <ReportItemStats>
+                                    <StatItem>
+                                        <StatLabel>Generated</StatLabel>
+                                        <StatValue>{new Date(reportData.dateAdded.$date).toLocaleDateString()}</StatValue>
+                                    </StatItem>
+                                    {reportData.citation && (
+                                        <StatItem>
+                                            <StatLabel>Sources</StatLabel>
+                                            <StatValue>{reportData.citation.length}</StatValue>
+                                        </StatItem>
+                                    )}
+                                </ReportItemStats>
+                            )}
+                        </ReportListItem>
+                    );
+                })}
+            </ReportsContainer>
         </ReportSidebar>
     );
 };
@@ -680,8 +864,8 @@ const ReportDetailsView: React.FC<{
         return (
             <PlaceholderContent>
                 <PlaceholderIcon>📊</PlaceholderIcon>
-                <PlaceholderText>Select a Report</PlaceholderText>
-                <PlaceholderSubtext>Choose a report from the sidebar to view its details</PlaceholderSubtext>
+                <PlaceholderText>Welcome to Regulatory Intelligence</PlaceholderText>
+                <PlaceholderSubtext>Select a report from the sidebar to access detailed regulatory analysis and compliance insights</PlaceholderSubtext>
             </PlaceholderContent>
         );
     }
@@ -693,36 +877,47 @@ const ReportDetailsView: React.FC<{
             <PlaceholderContent>
                 <PlaceholderIcon>📄</PlaceholderIcon>
                 <PlaceholderText>No Data Available</PlaceholderText>
-                <PlaceholderSubtext>This report has no data for the selected period</PlaceholderSubtext>
+                <PlaceholderSubtext>This report has no data for the selected period. Please check back later or adjust your filters.</PlaceholderSubtext>
             </PlaceholderContent>
         );
     }
 
+    // Determine priority based on report type
+    const getPriority = (type: string) => {
+        if (type.includes('critical') || type.includes('fines')) return 'high';
+        if (type.includes('bill') || type.includes('gazette')) return 'medium';
+        return 'low';
+    };
+
     return (
-        <div>
-            <ReportHeader>
-                <ReportTitle>{cardInfo?.title || reportType}</ReportTitle>
-                <ReportMeta>
+        <>
+            <ContentHeader>
+                <ContentTitle>{cardInfo?.title || reportType}</ContentTitle>
+                <ContentMeta>
                     <MetaItem>
-                        <MetaLabel>Report Type</MetaLabel>
-                        <MetaValue>{reportData.reportType}</MetaValue>
+                        <MetaLabel>Report ID</MetaLabel>
+                        <MetaValue>REG-2025-001</MetaValue>
                     </MetaItem>
                     <MetaItem>
-                        <MetaLabel>Date Range</MetaLabel>
-                        <MetaValue>{reportData.startDate} - {reportData.endDate}</MetaValue>
+                        <MetaLabel>Jurisdiction</MetaLabel>
+                        <MetaValue>{reportData.jurisdiction || 'Global'}</MetaValue>
                     </MetaItem>
                     <MetaItem>
-                        <MetaLabel>Generated</MetaLabel>
+                        <MetaLabel>Priority</MetaLabel>
+                        <PriorityBadge $priority={getPriority(reportData.reportType)}>
+                            {getPriority(reportData.reportType)} Priority
+                        </PriorityBadge>
+                    </MetaItem>
+                    <MetaItem>
+                        <MetaLabel>Status</MetaLabel>
+                        <MetaValue>Active</MetaValue>
+                    </MetaItem>
+                    <MetaItem>
+                        <MetaLabel>Last Updated</MetaLabel>
                         <MetaValue>{new Date(reportData.dateAdded.$date).toLocaleDateString()}</MetaValue>
                     </MetaItem>
-                    {reportData.citation && (
-                        <MetaItem>
-                            <MetaLabel>Citations</MetaLabel>
-                            <MetaValue>{reportData.citation.length} sources</MetaValue>
-                        </MetaItem>
-                    )}
-                </ReportMeta>
-            </ReportHeader>
+                </ContentMeta>
+            </ContentHeader>
             
             <ReportContent>
                 <DpoCard
@@ -734,7 +929,7 @@ const ReportDetailsView: React.FC<{
                     dataFullWidth={true}
                 />
             </ReportContent>
-        </div>
+        </>
     );
 };
 
@@ -805,31 +1000,35 @@ const DpoAgent: React.FC = () => {
         <PageContainer>
             <Container>
                 <StickyTopBar>
-                    <HorizontalFlexbox className="align-center pl-4 gap-2">
-                        <TextLabel size="large" style={{ color: theme.primaryColor }}>
-                            DPO Agent Dashboard
-                        </TextLabel>
-                        <TextLabel>{currentDate}</TextLabel>
-                    </HorizontalFlexbox>
-                    <HorizontalFlexbox className="px-4 mt-2 gap-2 align-center">
-                        <Badge
-                            color="primary"
-                            badgeContent=""
-                            variant="dot"
-                            invisible={JSON.stringify(args) == DPO_DEFAULT_ARGS_STRINGIFIED}
-                        >
-                            <BoxButton
-                                icon={<TuneIcon style={{ fontSize: '0.9rem' }} />}
-                                onClick={(e: any) => setAnchorEl(e.currentTarget)}
+                    <TopBarContent>
+                        <TopBarTitle>
+                            <TextLabel style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1e293b' }}>
+                                DPO Agent Dashboard
+                            </TextLabel>
+                            <TextLabel style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                                {currentDate}
+                            </TextLabel>
+                        </TopBarTitle>
+                        <TopBarActions>
+                            <Badge
+                                color="primary"
+                                badgeContent=""
+                                variant="dot"
+                                invisible={JSON.stringify(args) == DPO_DEFAULT_ARGS_STRINGIFIED}
                             >
-                                Filters
-                            </BoxButton>
-                        </Badge>
-                    </HorizontalFlexbox>
+                                <BoxButton
+                                    icon={<TuneIcon style={{ fontSize: '0.9rem' }} />}
+                                    onClick={(e: any) => setAnchorEl(e.currentTarget)}
+                                >
+                                    Filters
+                                </BoxButton>
+                            </Badge>
+                        </TopBarActions>
+                    </TopBarContent>
                 </StickyTopBar>
                 
                 <Popover
-                    style={{ zIndex: 2 }}
+                    style={{ zIndex: 20 }}
                     id={'dropdown-popover'}
                     open={open}
                     anchorEl={anchorEl}
@@ -867,6 +1066,9 @@ const DpoAgent: React.FC = () => {
 
 
 export default DpoAgent;
+
+
+
 
 
 
