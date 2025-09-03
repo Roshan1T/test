@@ -751,3 +751,394 @@ const CriticalUpdatesCard: React.FC<CriticalUpdatesCardProps> = ({
 
 export default CriticalUpdatesCard;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import React, { useState } from "react";
+import { useTheme } from "styled-components";
+import { ChevronDown, ChevronUp, Calendar, MapPin, ExternalLink } from "lucide-react";
+import ErrorIcon from '@mui/icons-material/Error';
+import Chip from '@components/atoms/Chip';
+import RoundedBox from '@components/atoms/RoundedBox';
+import HorizontalFlexbox from '@components/atoms/HorizontalFlexbox';
+import { GridContainer } from '@components/atoms/Grid';
+import { TextLabel, SecondaryLabel } from '@components/atoms/Fields';
+
+// Mock Data
+const mockData = {
+    "report_id": "personalized_critical_report_20250825_081345",
+    "client_name": "TechCorp Global Ltd",
+    "time_period": {
+        "start_date": "2025-08-18T08:13:45.082527",
+        "end_date": "2025-08-25T08:13:45.082527"
+    },
+    "document_counts": {
+        "regwatch_documents": 13,
+        "gazette_documents": 16,
+        "bills_legislation": 2,
+        "total_documents": 31
+    },
+    "critical_report": "This report summarizes all relevant new developments in data protection, cybersecurity, regulation, and enforcement with potential impact on TechCorp Global Ltd and its subsidiaries.",
+    "total_threats": 8,
+    "jurisdictions_count": 4,
+    "jurisdictions_analyzed": ["United Kingdom", "Singapore", "United States", "European Union (Netherlands)"],
+    "threat_distribution": {
+        "by_level": { "critical": 1, "high": 3, "medium": 3, "low": 1 },
+        "by_jurisdiction": {
+            "United Kingdom": { "critical": 0, "high": 1, "medium": 0, "low": 0 },
+            "European Union (Netherlands)": { "critical": 0, "high": 0, "medium": 1, "low": 0 },
+            "United States": { "critical": 1, "high": 2, "medium": 1, "low": 1 },
+            "Singapore": { "critical": 0, "high": 0, "medium": 1, "low": 0 }
+        }
+    },
+    "threats_by_jurisdiction": {
+        "United Kingdom": {
+            "Critical": [],
+            "High": [{
+                "jurisdiction": "United Kingdom",
+                "threat_title": "ICO Scrutiny on Facial Recognition Technology Compliance",
+                "threat_summary": "The ICO is conducting in-depth audits into the use of facial recognition technology by police forces, focusing on data protection compliance, fairness, necessity, and anti-discrimination measures.",
+                "threat_level": "High",
+                "date_issued": "2025-08-20",
+                "source_type": "RegWatch",
+                "reported_by": "Information Commissioner's Office (ICO)",
+                "why_threat": "TechCorp's AI solutions in biometric identification or surveillance must ensure robust safeguards and compliance to avoid scrutiny or regulatory enforcement actions similar to those faced by UK police.",
+                "financial_impact": "Not specified",
+                "compliance_deadline": "Not specified",
+                "recommended_actions": ["Audit current and planned facial recognition and biometric AI offerings for compliance with UK data protection standards", "Strengthen privacy impact assessments, transparency, and documentation"],
+                "source_document_id": "a08c01d2-ab7c-4104-90da-44f3cead1357",
+                "threat_id": "UNI-H-001"
+            }],
+            "Medium": [],
+            "Low": []
+        },
+        "United States": {
+            "Critical": [{
+                "jurisdiction": "United States",
+                "threat_title": "Critical Vulnerabilities in Siemens and Mendix Software",
+                "threat_summary": "CISA advisories highlight critical vulnerabilities in Siemens Desigo CC product family, SENTRON Powermanager, and Mendix SAML Module (CVSS 8.7, remotely exploitable), risking privilege escalation and remote account hijacking.",
+                "threat_level": "Critical",
+                "date_issued": "2025-08-19",
+                "source_type": "RegWatch",
+                "reported_by": "Cybersecurity and Infrastructure Security Agency (CISA)",
+                "why_threat": "If TechCorp or its suppliers use the affected Siemens/Mendix solutions, failure to patch exposes the company to breaches, regulatory enforcement, and contractual liability.",
+                "financial_impact": "Not specified",
+                "compliance_deadline": "Not specified",
+                "recommended_actions": ["Conduct immediate inventory for affected Siemens/Mendix products", "Apply recommended Siemens/CISA mitigations and patch updates"],
+                "source_document_id": "e1da08d8-4e5c-41a5-ae8b-a0d36ea8ebb3",
+                "threat_id": "UNI-C-003"
+            }],
+            "High": [],
+            "Medium": [],
+            "Low": []
+        }
+    }
+};
+
+// Interfaces
+interface ThreatData {
+    jurisdiction: string;
+    threat_title: string;
+    threat_summary: string;
+    threat_level: string;
+    date_issued: string;
+    source_type: string;
+    reported_by: string;
+    why_threat: string;
+    financial_impact: string;
+    compliance_deadline: string;
+    recommended_actions: string[];
+    source_document_id: string;
+    threat_id: string;
+}
+
+interface JurisdictionThreats {
+    Critical: ThreatData[];
+    High: ThreatData[];
+    Medium: ThreatData[];
+    Low: ThreatData[];
+}
+
+interface CriticalReportData {
+    report_id: string;
+    client_name: string;
+    time_period: { start_date: string; end_date: string };
+    document_counts: { total_documents: number };
+    critical_report: string;
+    total_threats: number;
+    jurisdictions_count: number;
+    jurisdictions_analyzed: string[];
+    threat_distribution: {
+        by_level: { critical: number; high: number; medium: number; low: number };
+        by_jurisdiction: Record<string, Record<string, number>>;
+    };
+    threats_by_jurisdiction: Record<string, JurisdictionThreats>;
+}
+
+interface CriticalUpdatesCardProps {
+    data?: CriticalReportData;
+}
+
+// Helper function
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    });
+};
+
+const getThreatVariant = (level: string) => {
+    switch (level.toLowerCase()) {
+        case "critical": return "red";
+        case "high": return "orange";
+        case "medium": return "green";
+        default: return "blue";
+    }
+};
+
+// Main Component
+const CriticalUpdatesCard: React.FC<CriticalUpdatesCardProps> = ({ data = mockData }) => {
+    const theme = useTheme();
+    const [expandedJurisdictions, setExpandedJurisdictions] = useState<Record<string, boolean>>({});
+
+    const toggleJurisdiction = (jurisdiction: string) => {
+        setExpandedJurisdictions(prev => ({
+            ...prev,
+            [jurisdiction]: !prev[jurisdiction]
+        }));
+    };
+
+    const getAllThreats = (jurisdictionThreats: JurisdictionThreats): ThreatData[] => {
+        return [...jurisdictionThreats.Critical, ...jurisdictionThreats.High, ...jurisdictionThreats.Medium, ...jurisdictionThreats.Low];
+    };
+
+    const getThreatCounts = (jurisdictionThreats: JurisdictionThreats) => ({
+        critical: jurisdictionThreats.Critical.length,
+        high: jurisdictionThreats.High.length,
+        medium: jurisdictionThreats.Medium.length,
+        low: jurisdictionThreats.Low.length,
+    });
+
+    return (
+        <RoundedBox style={{ padding: 0 }}>
+            {/* Header */}
+            <RoundedBox style={{
+                padding: '2rem',
+                marginBottom: '2rem',
+                borderLeft: `4px solid ${theme.red}`
+            }}>
+                <HorizontalFlexbox className="align-center" gap="0.75rem">
+                    <ErrorIcon sx={{ fontSize: 24, color: theme.red }} />
+                    <TextLabel size="large" style={{ fontWeight: 700 }}>
+                        Critical Updates Report
+                    </TextLabel>
+                </HorizontalFlexbox>
+
+                <div style={{ color: theme.red, fontWeight: 600, marginTop: '1rem' }}>
+                    {data.client_name} • {formatDate(data.time_period.start_date)} - {formatDate(data.time_period.end_date)}
+                </div>
+
+                <GridContainer cols={4} style={{ marginTop: '1.5rem', gap: '1rem' }}>
+                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '1rem' }}>
+                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                            Total Threats
+                        </SecondaryLabel>
+                        <TextLabel size="medium" style={{ fontWeight: 700 }}>
+                            {data.total_threats}
+                        </TextLabel>
+                    </RoundedBox>
+
+                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '1rem' }}>
+                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                            Jurisdictions
+                        </SecondaryLabel>
+                        <TextLabel size="medium" style={{ fontWeight: 700 }}>
+                            {data.jurisdictions_count}
+                        </TextLabel>
+                    </RoundedBox>
+
+                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '1rem' }}>
+                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                            Documents
+                        </SecondaryLabel>
+                        <TextLabel size="medium" style={{ fontWeight: 700 }}>
+                            {data.document_counts.total_documents}
+                        </TextLabel>
+                    </RoundedBox>
+
+                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '1rem' }}>
+                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                            Critical Level
+                        </SecondaryLabel>
+                        <TextLabel size="medium" style={{ fontWeight: 700 }}>
+                            {data.threat_distribution.by_level.critical}
+                        </TextLabel>
+                    </RoundedBox>
+                </GridContainer>
+            </RoundedBox>
+
+            {/* Executive Summary */}
+            <RoundedBox style={{ padding: '2rem', marginBottom: '2rem' }}>
+                <TextLabel size="large" style={{ fontWeight: 700, marginBottom: '1rem' }}>
+                    Executive Summary
+                </TextLabel>
+                <div style={{ lineHeight: 1.6, color: theme.textColor }}>
+                    {data.critical_report}
+                </div>
+            </RoundedBox>
+
+            {/* Threats by Jurisdiction */}
+            <div>
+                <TextLabel size="large" style={{
+                    fontWeight: 700,
+                    marginBottom: '1.5rem',
+                    borderBottom: `2px solid ${theme.borderColor}`,
+                    paddingBottom: '0.5rem',
+                    display: 'block'
+                }}>
+                    Threats by Jurisdiction
+                </TextLabel>
+
+                {Object.entries(data.threats_by_jurisdiction).map(([jurisdiction, threats]) => {
+                    const allThreats = getAllThreats(threats as JurisdictionThreats);
+                    const threatCounts = getThreatCounts(threats as JurisdictionThreats);
+                    const isExpanded = expandedJurisdictions[jurisdiction];
+
+                    if (allThreats.length === 0) return null;
+
+                    return (
+                        <div key={jurisdiction} style={{ marginBottom: '1rem' }}>
+                            {/* Jurisdiction Header */}
+                            <RoundedBox
+                                style={{
+                                    padding: '1.5rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    ':hover': { background: theme.hoverColor }
+                                }}
+                                onClick={() => toggleJurisdiction(jurisdiction)}
+                            >
+                                <HorizontalFlexbox className="space-between align-center">
+                                    <HorizontalFlexbox className="align-center" gap="0.5rem">
+                                        <MapPin size={20} />
+                                        <TextLabel size="medium" style={{ fontWeight: 700 }}>
+                                            {jurisdiction}
+                                        </TextLabel>
+                                    </HorizontalFlexbox>
+
+                                    <HorizontalFlexbox className="align-center" gap="1rem">
+                                        <HorizontalFlexbox gap="0.5rem">
+                                            {threatCounts.critical > 0 && (
+                                                <Chip variant="red">{threatCounts.critical} Critical</Chip>
+                                            )}
+                                            {threatCounts.high > 0 && (
+                                                <Chip variant="orange">{threatCounts.high} High</Chip>
+                                            )}
+                                            {threatCounts.medium > 0 && (
+                                                <Chip variant="green">{threatCounts.medium} Medium</Chip>
+                                            )}
+                                            {threatCounts.low > 0 && (
+                                                <Chip variant="blue">{threatCounts.low} Low</Chip>
+                                            )}
+                                        </HorizontalFlexbox>
+                                        {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </HorizontalFlexbox>
+                                </HorizontalFlexbox>
+                            </RoundedBox>
+
+                            {/* Threat List */}
+                            {isExpanded && (
+                                <div style={{ marginTop: '1rem' }}>
+                                    {allThreats.map((threat) => (
+                                        <RoundedBox key={threat.threat_id} style={{
+                                            padding: '1.5rem',
+                                            marginBottom: '1rem',
+                                            transition: 'all 0.2s ease'
+                                        }}>
+                                            <HorizontalFlexbox className="space-between align-start" style={{ marginBottom: '1rem' }}>
+                                                <TextLabel size="medium" style={{ fontWeight: 600, flex: 1 }}>
+                                                    {threat.threat_title}
+                                                </TextLabel>
+                                                <Chip variant={getThreatVariant(threat.threat_level)}>
+                                                    {threat.threat_level}
+                                                </Chip>
+                                            </HorizontalFlexbox>
+
+                                            <HorizontalFlexbox gap="1rem" style={{ marginBottom: '1rem', flexWrap: 'wrap' }}>
+                                                <HorizontalFlexbox gap="0.25rem" className="align-center">
+                                                    <Calendar size={14} />
+                                                    <SecondaryLabel size="xsmall">
+                                                        {formatDate(threat.date_issued)}
+                                                    </SecondaryLabel>
+                                                </HorizontalFlexbox>
+                                                <HorizontalFlexbox gap="0.25rem" className="align-center">
+                                                    <ExternalLink size={14} />
+                                                    <SecondaryLabel size="xsmall">
+                                                        {threat.source_type}
+                                                    </SecondaryLabel>
+                                                </HorizontalFlexbox>
+                                                <SecondaryLabel size="xsmall">
+                                                    ID: {threat.threat_id}
+                                                </SecondaryLabel>
+                                            </HorizontalFlexbox>
+
+                                            <div style={{ marginBottom: '1rem', lineHeight: 1.6 }}>
+                                                {threat.threat_summary}
+                                            </div>
+
+                                            <RoundedBox style={{
+                                                background: theme.cardBgSecondary,
+                                                padding: '1rem',
+                                                marginBottom: '1rem'
+                                            }}>
+                                                <strong>Why this is a threat:</strong>
+                                                <div style={{ marginTop: '0.5rem' }}>{threat.why_threat}</div>
+                                            </RoundedBox>
+
+                                            {threat.recommended_actions && threat.recommended_actions.length > 0 && (
+                                                <div>
+                                                    <strong>Recommended Actions:</strong>
+                                                    <ul style={{ margin: '0.5rem 0 0 1.5rem' }}>
+                                                        {threat.recommended_actions.map((action, index) => (
+                                                            <li key={index} style={{ margin: '0.25rem 0' }}>{action}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            <SecondaryLabel size="xsmall" style={{ marginTop: '1rem', display: 'block' }}>
+                                                Reported by: {threat.reported_by}
+                                            </SecondaryLabel>
+                                        </RoundedBox>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </RoundedBox>
+    );
+};
+
+export default CriticalUpdatesCard;
+
+
