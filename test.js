@@ -1142,3 +1142,502 @@ const CriticalUpdatesCard: React.FC<CriticalUpdatesCardProps> = ({ data = mockDa
 export default CriticalUpdatesCard;
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import React, { useState } from 'react';
+import styled, { useTheme } from 'styled-components';
+import { Plus, Bot, Globe, Building, AlertTriangle, CheckCircle } from 'lucide-react';
+import RoundedBox from '@components/atoms/RoundedBox';
+import HorizontalFlexbox from '@components/atoms/HorizontalFlexbox';
+import VerticalFlexbox from '@components/atoms/VerticalFlexbox';
+import { GridContainer } from '@components/atoms/Grid';
+import { TextLabel, SecondaryLabel } from '@components/atoms/Fields';
+import Chip from '@components/atoms/Chip';
+import BoxButton from '@components/atoms/BoxButton';
+import Modal from '@components/organisms/Shared/Modals/Modal';
+import TextInput from '@components/atoms/TextInput';
+import { useToggle } from '@utils/hooks/common/useToggle';
+
+// Types
+interface MonitoringAgent {
+    id: number;
+    name: string;
+    aiModel: string;
+    jurisdiction: string;
+    regulator: string;
+    industries: string[];
+    status: 'active' | 'inactive' | 'monitoring' | 'error';
+    lastActive: string;
+    threatsDetected: number;
+    description?: string;
+}
+
+// Mock data
+const mockAgents: MonitoringAgent[] = [
+    {
+        id: 1,
+        name: 'Financial Compliance Monitor',
+        aiModel: 'GPT-4 Turbo',
+        jurisdiction: 'United Kingdom',
+        regulator: 'Financial Conduct Authority (FCA)',
+        industries: ['Banking', 'Investment Services', 'Insurance'],
+        status: 'active',
+        lastActive: '2 minutes ago',
+        threatsDetected: 15,
+        description: 'Monitors FCA regulations and compliance requirements for financial services'
+    },
+    {
+        id: 2,
+        name: 'GDPR Privacy Guardian',
+        aiModel: 'Claude 3',
+        jurisdiction: 'European Union',
+        regulator: 'Data Protection Authority',
+        industries: ['Technology', 'Healthcare', 'Retail'],
+        status: 'monitoring',
+        lastActive: '1 hour ago',
+        threatsDetected: 8,
+        description: 'Tracks GDPR compliance and data protection requirements across EU jurisdictions'
+    },
+    {
+        id: 3,
+        name: 'Healthcare Safety Monitor',
+        aiModel: 'GPT-4',
+        jurisdiction: 'United States',
+        regulator: 'Food and Drug Administration (FDA)',
+        industries: ['Pharmaceuticals', 'Medical Devices', 'Healthcare'],
+        status: 'active',
+        lastActive: '30 minutes ago',
+        threatsDetected: 23,
+        description: 'Monitors FDA guidelines and healthcare safety regulations'
+    },
+    {
+        id: 4,
+        name: 'Environmental Compliance Tracker',
+        aiModel: 'Gemini Pro',
+        jurisdiction: 'Canada',
+        regulator: 'Environment and Climate Change Canada',
+        industries: ['Manufacturing', 'Energy', 'Mining'],
+        status: 'inactive',
+        lastActive: '2 days ago',
+        threatsDetected: 3,
+        description: 'Tracks environmental regulations and climate compliance requirements'
+    }
+];
+
+// Styled Components
+const Container = styled.div`
+  padding: 2rem;
+`;
+
+const Header = styled.div`
+  margin-bottom: 2rem;
+`;
+
+const AgentCard = styled(RoundedBox)`
+  padding: 1.5rem;
+  border: 1px solid ${props => props.theme.borderColor};
+  transition: all 0.2s ease;
+  cursor: pointer;
+  
+  &:hover {
+    border-color: ${props => props.theme.primaryColor};
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const StatusIndicator = styled.div<{ status: string }>`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: ${props => {
+        switch (props.status) {
+            case 'active': return '#22c55e';
+            case 'monitoring': return '#f59e0b';
+            case 'inactive': return '#6b7280';
+            case 'error': return '#ef4444';
+            default: return '#6b7280';
+        }
+    }};
+`;
+
+const IndustryChips = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+`;
+
+const AddAgentCard = styled(RoundedBox)`
+  padding: 2rem;
+  border: 2px dashed ${props => props.theme.borderColor};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: ${props => props.theme.primaryColor};
+    background-color: ${props => props.theme.primaryColor}05;
+  }
+`;
+
+const ModalContent = styled.div`
+  padding: 1rem;
+`;
+
+const FormField = styled.div`
+  margin-bottom: 1.5rem;
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: ${props => props.theme.textColor};
+`;
+
+// Helper functions
+const getStatusColor = (status: string) => {
+    switch (status) {
+        case 'active': return 'green';
+        case 'monitoring': return 'amber';
+        case 'inactive': return 'grey';
+        case 'error': return 'red';
+        default: return 'grey';
+    }
+};
+
+const formatLastActive = (lastActive: string) => {
+    return `Last active: ${lastActive}`;
+};
+
+// Add Agent Form Component
+const AddAgentForm: React.FC<{ onClose: () => void; onSubmit: (agent: Partial<MonitoringAgent>) => void }> = ({ onClose, onSubmit }) => {
+    const [formData, setFormData] = useState({
+        name: '',
+        aiModel: '',
+        jurisdiction: '',
+        regulator: '',
+        industries: [] as string[],
+        description: ''
+    });
+
+    const handleInputChange = (field: string, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSubmit = () => {
+        if (formData.name && formData.aiModel && formData.jurisdiction && formData.regulator) {
+            onSubmit({
+                ...formData,
+                status: 'active',
+                lastActive: 'Just now',
+                threatsDetected: 0
+            });
+            onClose();
+        }
+    };
+
+    return (
+        <ModalContent>
+            <FormField>
+                <Label>Agent Name</Label>
+                <TextInput
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="Enter agent name"
+                    variant="secondary"
+                />
+            </FormField>
+
+            <FormField>
+                <Label>AI Model</Label>
+                <TextInput
+                    value={formData.aiModel}
+                    onChange={(e) => handleInputChange('aiModel', e.target.value)}
+                    placeholder="e.g., GPT-4, Claude 3, Gemini Pro"
+                    variant="secondary"
+                />
+            </FormField>
+
+            <FormField>
+                <Label>Jurisdiction</Label>
+                <TextInput
+                    value={formData.jurisdiction}
+                    onChange={(e) => handleInputChange('jurisdiction', e.target.value)}
+                    placeholder="e.g., United Kingdom, European Union"
+                    variant="secondary"
+                />
+            </FormField>
+
+            <FormField>
+                <Label>Regulator</Label>
+                <TextInput
+                    value={formData.regulator}
+                    onChange={(e) => handleInputChange('regulator', e.target.value)}
+                    placeholder="e.g., Financial Conduct Authority (FCA)"
+                    variant="secondary"
+                />
+            </FormField>
+
+            <FormField>
+                <Label>Industries (comma-separated)</Label>
+                <TextInput
+                    value={formData.industries.join(', ')}
+                    onChange={(e) => handleInputChange('industries', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                    placeholder="e.g., Banking, Insurance, Investment Services"
+                    variant="secondary"
+                />
+            </FormField>
+
+            <FormField>
+                <Label>Description</Label>
+                <TextInput
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="Brief description of the agent's purpose"
+                    variant="secondary"
+                />
+            </FormField>
+
+            <HorizontalFlexbox className="gap-2 justify-end">
+                <BoxButton variant="borderless" onClick={onClose}>
+                    Cancel
+                </BoxButton>
+                <BoxButton variant="solid" onClick={handleSubmit}>
+                    Create Agent
+                </BoxButton>
+            </HorizontalFlexbox>
+        </ModalContent>
+    );
+};
+
+// Agent Card Component
+const AgentCardComponent: React.FC<{ agent: MonitoringAgent }> = ({ agent }) => {
+    const theme = useTheme();
+
+    return (
+        <AgentCard>
+            <VerticalFlexbox className="gap-3">
+                {/* Header with status */}
+                <HorizontalFlexbox className="align-center space-between">
+                    <HorizontalFlexbox className="align-center gap-2">
+                        <Bot size={20} color={theme.primaryColor} />
+                        <TextLabel size="medium" style={{ fontWeight: 600 }}>
+                            {agent.name}
+                        </TextLabel>
+                    </HorizontalFlexbox>
+                    <HorizontalFlexbox className="align-center gap-2">
+                        <StatusIndicator status={agent.status} />
+                        <Chip variant={getStatusColor(agent.status)} size="small">
+                            {agent.status}
+                        </Chip>
+                    </HorizontalFlexbox>
+                </HorizontalFlexbox>
+
+                {/* Description */}
+                {agent.description && (
+                    <SecondaryLabel size="small" style={{ lineHeight: 1.4 }}>
+                        {agent.description}
+                    </SecondaryLabel>
+                )}
+
+                {/* AI Model and Threats */}
+                <GridContainer cols={2} className="gap-3">
+                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '0.75rem' }}>
+                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                            AI Model
+                        </SecondaryLabel>
+                        <TextLabel size="small" style={{ fontWeight: 600 }}>
+                            {agent.aiModel}
+                        </TextLabel>
+                    </RoundedBox>
+
+                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '0.75rem' }}>
+                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                            Threats Detected
+                        </SecondaryLabel>
+                        <HorizontalFlexbox className="align-center gap-1">
+                            <TextLabel size="small" style={{ fontWeight: 600 }}>
+                                {agent.threatsDetected}
+                            </TextLabel>
+                            {agent.threatsDetected > 0 && <AlertTriangle size={14} color={theme.warningColor} />}
+                        </HorizontalFlexbox>
+                    </RoundedBox>
+                </GridContainer>
+
+                {/* Jurisdiction and Regulator */}
+                <VerticalFlexbox className="gap-2">
+                    <HorizontalFlexbox className="align-center gap-2">
+                        <Globe size={16} color={theme.textColorSecondary} />
+                        <SecondaryLabel size="small">Jurisdiction:</SecondaryLabel>
+                        <TextLabel size="small">{agent.jurisdiction}</TextLabel>
+                    </HorizontalFlexbox>
+
+                    <HorizontalFlexbox className="align-center gap-2">
+                        <Building size={16} color={theme.textColorSecondary} />
+                        <SecondaryLabel size="small">Regulator:</SecondaryLabel>
+                        <TextLabel size="small">{agent.regulator}</TextLabel>
+                    </HorizontalFlexbox>
+                </VerticalFlexbox>
+
+                {/* Industries */}
+                <VerticalFlexbox className="gap-1">
+                    <SecondaryLabel size="small">Industries:</SecondaryLabel>
+                    <IndustryChips>
+                        {agent.industries.map((industry, index) => (
+                            <Chip key={index} variant="primary" size="small">
+                                {industry}
+                            </Chip>
+                        ))}
+                    </IndustryChips>
+                </VerticalFlexbox>
+
+                {/* Footer */}
+                <HorizontalFlexbox className="align-center space-between" style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: `1px solid ${theme.borderColor}` }}>
+                    <SecondaryLabel size="xsmall">
+                        {formatLastActive(agent.lastActive)}
+                    </SecondaryLabel>
+                    <HorizontalFlexbox className="align-center gap-1">
+                        <CheckCircle size={12} color={theme.successColor} />
+                        <SecondaryLabel size="xsmall">Operational</SecondaryLabel>
+                    </HorizontalFlexbox>
+                </HorizontalFlexbox>
+            </VerticalFlexbox>
+        </AgentCard>
+    );
+};
+
+// Main Component
+const MonitoringAgentDashboard: React.FC = () => {
+    const [agents, setAgents] = useState<MonitoringAgent[]>(mockAgents);
+    const [showAddModal, toggleAddModal] = useToggle(false);
+    const theme = useTheme();
+
+    const handleAddAgent = (newAgent: Partial<MonitoringAgent>) => {
+        const agent: MonitoringAgent = {
+            id: Math.max(...agents.map(a => a.id)) + 1,
+            name: newAgent.name || '',
+            aiModel: newAgent.aiModel || '',
+            jurisdiction: newAgent.jurisdiction || '',
+            regulator: newAgent.regulator || '',
+            industries: newAgent.industries || [],
+            status: 'active',
+            lastActive: 'Just now',
+            threatsDetected: 0,
+            description: newAgent.description
+        };
+        setAgents(prev => [...prev, agent]);
+    };
+
+    const activeAgents = agents.filter(a => a.status === 'active').length;
+    const totalThreats = agents.reduce((sum, a) => sum + a.threatsDetected, 0);
+
+    return (
+        <Container>
+            {/* Header Section */}
+            <Header>
+                <HorizontalFlexbox className="align-center space-between mb-4">
+                    <VerticalFlexbox>
+                        <TextLabel size="large" style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
+                            Monitoring Agent Dashboard
+                        </TextLabel>
+                        <SecondaryLabel>
+                            Manage your AI-powered regulatory monitoring agents
+                        </SecondaryLabel>
+                    </VerticalFlexbox>
+
+                    <BoxButton
+                        variant="solid"
+                        icon={<Plus size={16} />}
+                        onClick={toggleAddModal}
+                    >
+                        Add Agent
+                    </BoxButton>
+                </HorizontalFlexbox>
+
+                {/* Stats */}
+                <GridContainer cols={3} className="gap-4 mb-6">
+                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '1rem' }}>
+                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                            Active Agents
+                        </SecondaryLabel>
+                        <TextLabel size="large" style={{ fontWeight: 700, color: theme.successColor }}>
+                            {activeAgents} / {agents.length}
+                        </TextLabel>
+                    </RoundedBox>
+
+                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '1rem' }}>
+                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                            Total Threats Detected
+                        </SecondaryLabel>
+                        <TextLabel size="large" style={{ fontWeight: 700, color: theme.warningColor }}>
+                            {totalThreats}
+                        </TextLabel>
+                    </RoundedBox>
+
+                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '1rem' }}>
+                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                            Coverage
+                        </SecondaryLabel>
+                        <TextLabel size="large" style={{ fontWeight: 700, color: theme.primaryColor }}>
+                            {[...new Set(agents.map(a => a.jurisdiction))].length} Jurisdictions
+                        </TextLabel>
+                    </RoundedBox>
+                </GridContainer>
+            </Header>
+
+            {/* Agents Grid */}
+            <GridContainer cols={3} className="gap-6">
+                {agents.map(agent => (
+                    <AgentCardComponent key={agent.id} agent={agent} />
+                ))}
+
+                {/* Add Agent Card */}
+                <AddAgentCard onClick={toggleAddModal}>
+                    <Plus size={32} color={theme.textColorSecondary} style={{ marginBottom: '1rem' }} />
+                    <TextLabel style={{ color: theme.textColorSecondary, textAlign: 'center' }}>
+                        Add New Agent
+                    </TextLabel>
+                    <SecondaryLabel size="small" style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                        Deploy a new monitoring agent to track regulatory changes
+                    </SecondaryLabel>
+                </AddAgentCard>
+            </GridContainer>
+
+            {/* Add Agent Modal */}
+            {showAddModal && (
+                <Modal
+                    title="Create New Monitoring Agent"
+                    closeModal={toggleAddModal}
+                    variant="medium"
+                >
+                    <AddAgentForm onClose={toggleAddModal} onSubmit={handleAddAgent} />
+                </Modal>
+            )}
+        </Container>
+    );
+};
+
+export default MonitoringAgentDashboard;
+
+
+
