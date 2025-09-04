@@ -1641,3 +1641,357 @@ export default MonitoringAgentDashboard;
 
 
 
+
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import Modal from '@components/organisms/Shared/Modals/Modal';
+import BoxButton from '@components/atoms/BoxButton';
+import TextInput, { TextArea } from '@components/atoms/TextInput';
+import CustomSelect from '@components/atoms/CustomSelect';
+import HorizontalFlexbox from '@components/atoms/HorizontalFlexbox';
+import VerticalFlexbox from '@components/atoms/VerticalFlexbox';
+import { TextLabel, SecondaryLabel } from '@components/atoms/Fields';
+
+// Hooks following exact HZGlobalFilters patterns
+import { useJurisdictions } from '@utils/hooks/common/useJurisdictions';
+import { useRegulatoryWatchRegulators } from '@utils/hooks/gc/HorizonScanning/useRegulatoryWatch';
+import { useHZThemes } from '@utils/hooks/gc/HorizonScanning/useHZThemes';
+
+const FormContainer = styled.div`
+  padding: 1.5rem;
+  max-height: 80vh;
+  overflow-y: auto;
+`;
+
+const ButtonsWrapper = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  border-top: 1px solid ${(props) => props.theme.borderColor};
+  padding: 1rem 1.5rem;
+`;
+
+const FormSection = styled.div`
+  margin-bottom: 1.5rem;
+`;
+
+interface CreateAgentFormProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSubmit: (agentData: any) => void;
+}
+
+const CreateAgentForm: React.FC<CreateAgentFormProps> = ({
+    isOpen,
+    onClose,
+    onSubmit,
+}) => {
+    // Form state - following exact HZGlobalFilters patterns
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        jurisdiction: [], // Array of jurisdiction labels like HZGlobalFilters
+        regulator: [], // Array of regulator values like HZGlobalFilters
+        industryCategories: [], // Array like HZGlobalFilters industryCategories
+        qualitativeThemes: [], // Array like HZGlobalFilters qualitativeThemes
+        model: null,
+        keywords: '',
+        priority: null,
+    });
+
+    const [errors, setErrors] = useState({});
+
+    // Data loading hooks following exact HZGlobalFilters patterns
+    const { data: jurisdictions = [] } = useJurisdictions();
+    const { data: regulators = [] } = useRegulatoryWatchRegulators({
+        jurisdiction: formData.jurisdiction, // Pass jurisdiction array directly like HZGlobalFilters
+    });
+    const { data: catThemes = [] } = useHZThemes(); // industryCategories
+    const { data: qualitativeThemes = [] } = useHZThemes({
+        optionType: 'qualitative_themes', // qualitativeThemes like HZGlobalFilters
+    });
+
+    // AI Model options (simplified based on existing patterns)
+    const aiModelOptions = [
+        { label: 'GPT-4', value: 'gpt-4' },
+        { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' },
+        { label: 'Claude-3', value: 'claude-3' },
+        { label: 'Gemini Pro', value: 'gemini-pro' },
+    ];
+
+    // Priority options
+    const priorityOptions = [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium' },
+        { label: 'High', value: 'high' },
+        { label: 'Critical', value: 'critical' },
+    ];
+
+    // Transform data exactly like HZGlobalFilters
+    // Jurisdictions are used directly (already have label/value format)
+    const jurisdictionOptions = jurisdictions || [];
+
+    // Regulators are used directly (already have label/value format)  
+    const regulatorOptions = regulators || [];
+
+    // Industry categories (catThemes) are used directly
+    const industryOptions = catThemes || [];
+
+    // Qualitative themes are used directly
+    const themeOptions = qualitativeThemes || [];
+
+    // Reset regulator when jurisdiction changes (following HZGlobalFilters pattern)
+    useEffect(() => {
+        if (formData.jurisdiction && formData.jurisdiction.length > 0) {
+            setFormData(prev => ({ ...prev, regulator: [] }));
+        }
+    }, [formData.jurisdiction]);
+
+    const handleInputChange = (name: string, value: any) => {
+        setFormData(prev => ({ ...prev, [name]: value }));
+        // Clear error when user starts typing
+        if (errors[name]) {
+            setErrors(prev => ({ ...prev, [name]: null }));
+        }
+    };
+
+    const validateForm = () => {
+        const newErrors: any = {};
+
+        if (!formData.name.trim()) {
+            newErrors.name = 'Agent name is required';
+        }
+
+        if (!formData.description.trim()) {
+            newErrors.description = 'Description is required';
+        }
+
+        if (!formData.jurisdiction || formData.jurisdiction.length === 0) {
+            newErrors.jurisdiction = 'Jurisdiction is required';
+        }
+
+        if (!formData.model) {
+            newErrors.model = 'AI Model is required';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = () => {
+        if (validateForm()) {
+            onSubmit({
+                ...formData,
+                jurisdiction: formData.jurisdiction.map(j => j.label || j).join(', '),
+                regulator: formData.regulator.map(r => r.label || r).join(', '),
+                industry: formData.industry.map(i => i.label || i).join(', '),
+                model: formData.model?.label,
+                priority: formData.priority?.label || 'Medium',
+            });
+            handleClose();
+        }
+    };
+
+    const handleClose = () => {
+        setFormData({
+            name: '',
+            description: '',
+            jurisdiction: [],
+            regulator: [],
+            industry: [],
+            model: null,
+            keywords: '',
+            priority: null,
+        });
+        setErrors({});
+        onClose();
+    };
+
+    return (
+        <Modal
+            isOpen={isOpen}
+            closeModal={handleClose}
+            title="Create New Monitoring Agent"
+            width="600px"
+        >
+            <FormContainer>
+                <VerticalFlexbox gap="1.5rem">
+                    {/* Basic Information */}
+                    <FormSection>
+                        <TextLabel size="medium" style={{ marginBottom: '1rem', display: 'block' }}>
+                            Basic Information
+                        </TextLabel>
+                        <VerticalFlexbox gap="1rem">
+                            <TextInput
+                                title="Agent Name"
+                                placeholder="Enter agent name"
+                                value={formData.name}
+                                onChange={(e) => handleInputChange('name', e.target.value)}
+                                errorMessage={errors.name}
+                            />
+                            <TextArea
+                                title="Description"
+                                placeholder="Describe what this agent will monitor"
+                                value={formData.description}
+                                onChange={(e) => handleInputChange('description', e.target.value)}
+                                errorMessage={errors.description}
+                                rows={3}
+                            />
+                        </VerticalFlexbox>
+                    </FormSection>
+
+                    {/* Monitoring Scope */}
+                    <FormSection>
+                        <TextLabel size="medium" style={{ marginBottom: '1rem', display: 'block' }}>
+                            Monitoring Scope
+                        </TextLabel>
+                        <VerticalFlexbox gap="1rem">
+                            <HorizontalFlexbox gap="1rem">
+                                <div style={{ flex: 1 }}>
+                                    <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                                        Jurisdictions *
+                                    </TextLabel>
+                                    <CustomSelect
+                                        options={jurisdictionOptions}
+                                        isMulti
+                                        placeholder="Select Jurisdictions"
+                                        value={formData.jurisdiction?.map(
+                                            (j) => jurisdictionOptions?.find((opt) => opt.label === j),
+                                        )}
+                                        onChange={(e) => handleInputChange('jurisdiction', e.map((j) => j.label))}
+                                        showBorder
+                                    />
+                                    {errors.jurisdiction && (
+                                        <SecondaryLabel style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                                            {errors.jurisdiction}
+                                        </SecondaryLabel>
+                                    )}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                                        Regulators
+                                    </TextLabel>
+                                    {formData.jurisdiction?.length > 0 ? (
+                                        <CustomSelect
+                                            options={regulatorOptions}
+                                            isMulti
+                                            placeholder="Select Regulators"
+                                            value={formData.regulator?.map(
+                                                (r) => regulatorOptions?.find((opt) => opt.value === r),
+                                            )}
+                                            onChange={(e) => handleInputChange('regulator', e.map((r) => r.value))}
+                                            showBorder
+                                        />
+                                    ) : (
+                                        <CustomSelect
+                                            value={[]}
+                                            onChange={() => { }}
+                                            options={[]}
+                                            placeholder="Select jurisdiction first"
+                                            isDisabled={true}
+                                            isMulti
+                                            showBorder
+                                        />
+                                    )}
+                                </div>
+                            </HorizontalFlexbox>
+
+                            <div>
+                                <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                                    Industry Categories
+                                </TextLabel>
+                                <CustomSelect
+                                    options={industryOptions}
+                                    isMulti
+                                    placeholder="Select Industry"
+                                    value={formData.industryCategories?.map(
+                                        (j) => industryOptions?.find((opt) => opt.value === j),
+                                    )}
+                                    onChange={(e) => handleInputChange('industryCategories', e.map((j) => j.value))}
+                                    showBorder
+                                />
+                            </div>
+
+                            <div>
+                                <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                                    Themes
+                                </TextLabel>
+                                <CustomSelect
+                                    options={themeOptions}
+                                    isMulti
+                                    placeholder="Select Themes"
+                                    value={formData.qualitativeThemes?.map(
+                                        (j) => themeOptions?.find((opt) => opt.value === j),
+                                    )}
+                                    onChange={(e) => handleInputChange('qualitativeThemes', e.map((j) => j.value))}
+                                    showBorder
+                                />
+                            </div>
+                        </VerticalFlexbox>
+                    </FormSection>
+
+                    {/* AI Configuration */}
+                    <FormSection>
+                        <TextLabel size="medium" style={{ marginBottom: '1rem', display: 'block' }}>
+                            AI Configuration
+                        </TextLabel>
+                        <VerticalFlexbox gap="1rem">
+                            <HorizontalFlexbox gap="1rem">
+                                <div style={{ flex: 1 }}>
+                                    <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                                        AI Model *
+                                    </TextLabel>
+                                    <CustomSelect
+                                        value={formData.model}
+                                        onChange={(option) => handleInputChange('model', option)}
+                                        options={aiModelOptions}
+                                        placeholder="Select AI model"
+                                        showBorder
+                                    />
+                                    {errors.model && (
+                                        <SecondaryLabel style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                                            {errors.model}
+                                        </SecondaryLabel>
+                                    )}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
+                                        Priority
+                                    </TextLabel>
+                                    <CustomSelect
+                                        value={formData.priority}
+                                        onChange={(option) => handleInputChange('priority', option)}
+                                        options={priorityOptions}
+                                        placeholder="Select priority"
+                                        showBorder
+                                    />
+                                </div>
+                            </HorizontalFlexbox>
+
+                            <TextInput
+                                title="Keywords"
+                                placeholder="Enter keywords separated by commas"
+                                value={formData.keywords}
+                                onChange={(e) => handleInputChange('keywords', e.target.value)}
+                                description="Keywords to focus monitoring on (optional)"
+                            />
+                        </VerticalFlexbox>
+                    </FormSection>
+                </VerticalFlexbox>
+            </FormContainer>
+
+            <ButtonsWrapper>
+                <BoxButton variant="secondary" onClick={handleClose}>
+                    Cancel
+                </BoxButton>
+                <BoxButton variant="primary" onClick={handleSubmit}>
+                    Create Agent
+                </BoxButton>
+            </ButtonsWrapper>
+        </Modal>
+    );
+};
+
+export default CreateAgentForm;
+
+
