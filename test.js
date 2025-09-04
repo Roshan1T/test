@@ -1,836 +1,934 @@
-import React, { useState, useEffect } from 'react';
-import styled, { useTheme } from 'styled-components';
-import Modal from '@components/atoms/Modal';
-import BoxButton from '@components/atoms/BoxButton';
-import TextInput, { TextArea } from '@components/atoms/TextInput';
-import CustomSelect from '@components/atoms/CustomSelect';
-import HorizontalFlexbox from '@components/atoms/HorizontalFlexbox';
-import VerticalFlexbox from '@components/atoms/VerticalFlexbox';
-import { TextLabel, SecondaryLabel } from '@components/atoms/Fields';
-import AddIcon from '@mui/icons-material/Add';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState } from "react";
+import styled, { useTheme } from "styled-components";
+import VerticalFlexbox from "@components/atoms/VerticalFlexbox";
+import RoundedBox from "@components/atoms/RoundedBox";
+import HorizontalFlexbox from "@components/atoms/HorizontalFlexbox";
+import { FieldLabel, SecondaryLabel, TextLabel } from "@components/atoms/Fields";
+import CircularProgress from "@components/atoms/CircularProgress";
+import { Badge, Popover } from '@mui/material';
+import useLocalStorage from "@utils/hooks/useLocalStorage";
+import BoxButton from "@components/atoms/BoxButton";
+import SwitchToggle from "@components/atoms/Switch";
+import TuneIcon from '@mui/icons-material/Tune';
+import EsgCard from "./EsgCard";
+import EsgFilters, { ESG_DEFAULT_ARGS, ESG_DEFAULT_ARGS_STRINGIFIED } from "@components/organisms/ESG/EsgFilters";
+import { useFetchEsg } from "@utils/hooks/esg/useEsg";
+import LoadingMessage from "@components/atoms/LoadingMessage";
 
-// Hooks following exact HZGlobalFilters patterns
-import { useJurisdictions } from '@utils/hooks/common/useJurisdictions';
-import { useRegulatoryWatchRegulators } from '@utils/hooks/gc/HorizonScanning/useRegulatoryWatch';
-import { useHZThemes } from '@utils/hooks/gc/HorizonScanning/useHZThemes';
+//styles - Using project theme colors instead of hardcoded values
+const PageContainer = styled.div`
+  min-height: 100vh;
+  background-color: ${(props) => props.theme.pageBg};
+`;
 
-// Styled Components - following PromptLibraryModal pattern
 const Container = styled.div`
-  padding: 1rem;
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 1.5rem;
-  position: relative;
-  height: 100%;
-
-  * {
-    font-family: 'Mona sans', sans-serif;
-  }
-`;
-
-const Sidebar = styled.div`
-  border-right: 1px solid ${(props) => props.theme.borderColor};
-  padding-right: 1rem;
-  background: ${(props) => props.theme.cardBg};
-  overflow: auto;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-`;
-
-const MainContent = styled.div`
-  padding: 0 1rem;
-  position: relative;
+  width: 100%;
+  height: 100vh;
   overflow: hidden;
-  overflow-y: auto;
 `;
 
-const FormContainer = styled.div`
-  max-height: 80vh;
-  overflow-y: auto;
+const StickyTopBar = styled.div`
+  position: sticky;
+  top: 0;
+  width: 100%;
+  padding: 1.25rem 2.5rem;
+  background-color: ${(props) => props.theme.cardBg};
+  z-index: 10;
+  border-bottom: 1px solid ${(props) => props.theme.borderColor};
+  backdrop-filter: blur(12px);
+  box-shadow: ${(props) => props.theme.moduleShadow};
 `;
 
-const ButtonsWrapper = styled.div`
+const TopBarContent = styled.div`
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const TopBarTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+`;
+
+const TopBarActions = styled.div`
+  display: flex;
+  align-items: center;
   gap: 1rem;
-  border-top: 1px solid ${(props) => props.theme.borderColor};
-  padding: 1rem 0;
-  margin-top: 1rem;
 `;
 
-const FormSection = styled.div`
-  margin-bottom: 1.5rem;
-  padding: 1rem;
+const ViewToggleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background-color: ${(props) => props.theme.cardBgSecondary};
+  border-radius: ${(props) => props.theme.borderRadius};
   border: 1px solid ${(props) => props.theme.borderColor};
-  border-radius: 8px;
-  background: ${(props) => props.theme.cardBgSecondary || props.theme.cardBg};
 `;
 
-const SidebarSection = styled.div`
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  border: 1px solid ${(props) => props.theme.borderColor};
-  border-radius: 8px;
-  background: ${(props) => props.theme.cardBgSecondary || props.theme.cardBg};
+const ViewToggleLabel = styled(SecondaryLabel)`
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: ${(props) => props.theme.labelColor};
 `;
 
-// Animation variants following PromptLibraryModal
-const slideAnimation = {
-    initial: {
-        opacity: 0,
-        x: 20,
-        scale: 0.95,
-    },
-    animate: {
-        opacity: 1,
-        x: 0,
-        scale: 1,
-        transition: {
-            type: 'spring',
-            stiffness: 300,
-            damping: 30,
-        },
-    },
-    exit: {
-        opacity: 0,
-        x: -20,
-        scale: 0.95,
-        transition: {
-            duration: 0.2,
-        },
-    },
-};
-
-interface CreateAgentFormProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSubmit: (agentData: any) => void;
-}
-
-const CreateAgentForm: React.FC<CreateAgentFormProps> = ({
-    isOpen,
-    onClose,
-    onSubmit,
-}) => {
-    const theme = useTheme();
-
-    // Form state - following exact HZGlobalFilters patterns
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        jurisdiction: [], // Array of jurisdiction labels like HZGlobalFilters
-        regulator: [], // Array of regulator values like HZGlobalFilters
-        industryCategories: [], // Array like HZGlobalFilters industryCategories
-        qualitativeThemes: [], // Array like HZGlobalFilters qualitativeThemes
-        model: null,
-        keywords: '',
-        priority: null,
-    });
-
-    const [errors, setErrors] = useState({});
-    const [showAdvanced, setShowAdvanced] = useState(false);
-
-    // Data loading hooks following exact HZGlobalFilters patterns
-    const { data: jurisdictions = [] } = useJurisdictions();
-    const { data: regulators = [] } = useRegulatoryWatchRegulators({
-        jurisdiction: formData.jurisdiction, // Pass jurisdiction array directly like HZGlobalFilters
-    });
-    const { data: catThemes = [] } = useHZThemes(); // industryCategories
-    const { data: qualitativeThemes = [] } = useHZThemes({
-        optionType: 'qualitative_themes', // qualitativeThemes like HZGlobalFilters
-    });
-
-    // AI Model options (simplified based on existing patterns)
-    const aiModelOptions = [
-        { label: 'GPT-4', value: 'gpt-4' },
-        { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' },
-        { label: 'Claude-3', value: 'claude-3' },
-        { label: 'Gemini Pro', value: 'gemini-pro' },
-    ];
-
-    // Priority options
-    const priorityOptions = [
-        { label: 'Low', value: 'low' },
-        { label: 'Medium', value: 'medium' },
-        { label: 'High', value: 'high' },
-        { label: 'Critical', value: 'critical' },
-    ];
-
-    // Transform data exactly like HZGlobalFilters
-    // Jurisdictions are used directly (already have label/value format)
-    const jurisdictionOptions = jurisdictions || [];
-
-    // Regulators are used directly (already have label/value format)  
-    const regulatorOptions = regulators || [];
-
-    // Industry categories (catThemes) are used directly
-    const industryOptions = catThemes || [];
-
-    // Qualitative themes are used directly
-    const themeOptions = qualitativeThemes || [];
-
-    // Reset regulator when jurisdiction changes (following HZGlobalFilters pattern)
-    useEffect(() => {
-        if (formData.jurisdiction && formData.jurisdiction.length > 0) {
-            setFormData(prev => ({ ...prev, regulator: [] }));
-        }
-    }, [formData.jurisdiction]);
-
-    const handleInputChange = (name: string, value: any) => {
-        setFormData(prev => ({ ...prev, [name]: value }));
-        // Clear error when user starts typing
-        if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: null }));
-        }
-    };
-
-    const validateForm = () => {
-        const newErrors: any = {};
-
-        if (!formData.name.trim()) {
-            newErrors.name = 'Agent name is required';
-        }
-
-        if (!formData.description.trim()) {
-            newErrors.description = 'Description is required';
-        }
-
-        if (!formData.jurisdiction || formData.jurisdiction.length === 0) {
-            newErrors.jurisdiction = 'Jurisdiction is required';
-        }
-
-        if (!formData.model) {
-            newErrors.model = 'AI Model is required';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSubmit = () => {
-        if (validateForm()) {
-            onSubmit(formData);
-            onClose();
-            // Reset form
-            setFormData({
-                name: '',
-                description: '',
-                jurisdiction: [],
-                regulator: [],
-                industryCategories: [],
-                qualitativeThemes: [],
-                model: null,
-                keywords: '',
-                priority: null,
-            });
-            setErrors({});
-        }
-    };
-
-    if (!isOpen) return null;
-
-    return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Create New AI Monitoring Agent">
-            <Container>
-                {/* Sidebar - Agent Summary & Quick Actions */}
-                <Sidebar>
-                    <SidebarSection>
-                        <TextLabel size="medium" style={{ color: theme.primaryColor, marginBottom: '1rem' }}>
-                            Agent Overview
-                        </TextLabel>
-                        <VerticalFlexbox gap="0.5rem">
-                            <HorizontalFlexbox className="space-between">
-                                <SecondaryLabel size="small">Name:</SecondaryLabel>
-                                <TextLabel size="small">{formData.name || 'Untitled Agent'}</TextLabel>
-                            </HorizontalFlexbox>
-                            <HorizontalFlexbox className="space-between">
-                                <SecondaryLabel size="small">Jurisdictions:</SecondaryLabel>
-                                <TextLabel size="small">{formData.jurisdiction.length || 0}</TextLabel>
-                            </HorizontalFlexbox>
-                            <HorizontalFlexbox className="space-between">
-                                <SecondaryLabel size="small">Industries:</SecondaryLabel>
-                                <TextLabel size="small">{formData.industryCategories.length || 0}</TextLabel>
-                            </HorizontalFlexbox>
-                            <HorizontalFlexbox className="space-between">
-                                <SecondaryLabel size="small">Model:</SecondaryLabel>
-                                <TextLabel size="small">{formData.model?.label || 'Not selected'}</TextLabel>
-                            </HorizontalFlexbox>
-                        </VerticalFlexbox>
-                    </SidebarSection>
-
-                    <SidebarSection>
-                        <TextLabel size="medium" style={{ color: theme.primaryColor, marginBottom: '1rem' }}>
-                            Quick Actions
-                        </TextLabel>
-                        <VerticalFlexbox gap="0.5rem">
-                            <BoxButton
-                                variant={showAdvanced ? 'solid' : 'outline'}
-                                onClick={() => setShowAdvanced(!showAdvanced)}
-                                icon={<AddIcon style={{ fontSize: '1rem' }} />}
-                            >
-                                {showAdvanced ? 'Hide' : 'Show'} Advanced Options
-                            </BoxButton>
-                        </VerticalFlexbox>
-                    </SidebarSection>
-                </Sidebar>
-
-                {/* Main Content - Form */}
-                <MainContent>
-                    <FormContainer>
-                        <VerticalFlexbox gap="1.5rem">
-                            {/* Basic Information */}
-                            <FormSection>
-                                <TextLabel size="medium" style={{ marginBottom: '1rem', display: 'block', color: theme.primaryColor }}>
-                                    Basic Information
-                                </TextLabel>
-                                <VerticalFlexbox gap="1rem">
-                                    <TextInput
-                                        title="Agent Name *"
-                                        placeholder="Enter a descriptive name for your monitoring agent"
-                                        value={formData.name}
-                                        onChange={(e) => handleInputChange('name', e.target.value)}
-                                        error={errors.name}
-                                    />
-
-                                    <TextArea
-                                        title="Description"
-                                        placeholder="Describe what this agent will monitor and its purpose"
-                                        value={formData.description}
-                                        onChange={(e) => handleInputChange('description', e.target.value)}
-                                        rows={3}
-                                    />
-                                </VerticalFlexbox>
-                            </FormSection>
-
-                            {/* Monitoring Scope */}
-                            <FormSection>
-                                <TextLabel size="medium" style={{ marginBottom: '1rem', display: 'block', color: theme.primaryColor }}>
-                                    Monitoring Scope
-                                </TextLabel>
-                                <VerticalFlexbox gap="1rem">
-                                    <HorizontalFlexbox gap="1rem">
-                                        <div style={{ flex: 1 }}>
-                                            <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                                                Jurisdictions *
-                                            </TextLabel>
-                                            <CustomSelect
-                                                options={jurisdictionOptions}
-                                                isMulti
-                                                placeholder="Select Jurisdictions"
-                                                value={formData.jurisdiction?.map(
-                                                    (j) => jurisdictionOptions?.find((opt) => opt.label === j),
-                                                )}
-                                                onChange={(e) => handleInputChange('jurisdiction', e.map((j) => j.label))}
-                                                showBorder
-                                            />
-                                            {errors.jurisdiction && (
-                                                <SecondaryLabel style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                                                    {errors.jurisdiction}
-                                                </SecondaryLabel>
-                                            )}
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                                                Regulators
-                                            </TextLabel>
-                                            {formData.jurisdiction?.length > 0 ? (
-                                                <CustomSelect
-                                                    options={regulatorOptions}
-                                                    isMulti
-                                                    placeholder="Select Regulators"
-                                                    value={formData.regulator?.map(
-                                                        (r) => regulatorOptions?.find((opt) => opt.value === r),
-                                                    )}
-                                                    onChange={(e) => handleInputChange('regulator', e.map((r) => r.value))}
-                                                    showBorder
-                                                />
-                                            ) : (
-                                                <CustomSelect
-                                                    value={[]}
-                                                    onChange={() => { }}
-                                                    options={[]}
-                                                    placeholder="Select jurisdiction first"
-                                                    isDisabled={true}
-                                                    isMulti
-                                                    showBorder
-                                                />
-                                            )}
-                                        </div>
-                                    </HorizontalFlexbox>
-
-                                    <div>
-                                        <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                                            Industry Categories
-                                        </TextLabel>
-                                        <CustomSelect
-                                            options={industryOptions}
-                                            isMulti
-                                            placeholder="Select Industry"
-                                            value={formData.industryCategories?.map(
-                                                (j) => industryOptions?.find((opt) => opt.value === j),
-                                            )}
-                                            onChange={(e) => handleInputChange('industryCategories', e.map((j) => j.value))}
-                                            showBorder
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                                            Themes
-                                        </TextLabel>
-                                        <CustomSelect
-                                            options={themeOptions}
-                                            isMulti
-                                            placeholder="Select Themes"
-                                            value={formData.qualitativeThemes?.map(
-                                                (j) => themeOptions?.find((opt) => opt.value === j),
-                                            )}
-                                            onChange={(e) => handleInputChange('qualitativeThemes', e.map((j) => j.value))}
-                                            showBorder
-                                        />
-                                    </div>
-                                </VerticalFlexbox>
-                            </FormSection>
-
-                            {/* AI Configuration */}
-                            <FormSection>
-                                <TextLabel size="medium" style={{ marginBottom: '1rem', display: 'block', color: theme.primaryColor }}>
-                                    AI Configuration
-                                </TextLabel>
-                                <VerticalFlexbox gap="1rem">
-                                    <HorizontalFlexbox gap="1rem">
-                                        <div style={{ flex: 1 }}>
-                                            <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                                                AI Model *
-                                            </TextLabel>
-                                            <CustomSelect
-                                                value={formData.model}
-                                                onChange={(option) => handleInputChange('model', option)}
-                                                options={aiModelOptions}
-                                                placeholder="Select AI model"
-                                                showBorder
-                                            />
-                                            {errors.model && (
-                                                <SecondaryLabel style={{ color: 'red', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                                                    {errors.model}
-                                                </SecondaryLabel>
-                                            )}
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <TextLabel size="small" style={{ marginBottom: '0.5rem', display: 'block' }}>
-                                                Priority
-                                            </TextLabel>
-                                            <CustomSelect
-                                                value={formData.priority}
-                                                onChange={(option) => handleInputChange('priority', option)}
-                                                options={priorityOptions}
-                                                placeholder="Select priority"
-                                                showBorder
-                                            />
-                                        </div>
-                                    </HorizontalFlexbox>
-
-                                    <AnimatePresence>
-                                        {showAdvanced && (
-                                            <motion.div
-                                                variants={slideAnimation}
-                                                initial="initial"
-                                                animate="animate"
-                                                exit="exit"
-                                            >
-                                                <TextInput
-                                                    title="Keywords"
-                                                    placeholder="Enter keywords separated by commas"
-                                                    value={formData.keywords}
-                                                    onChange={(e) => handleInputChange('keywords', e.target.value)}
-                                                    description="Keywords to focus monitoring on (optional)"
-                                                />
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </VerticalFlexbox>
-                            </FormSection>
-                        </VerticalFlexbox>
-
-                        {/* Action Buttons */}
-                        <ButtonsWrapper>
-                            <BoxButton variant="outline" onClick={onClose}>
-                                Cancel
-                            </BoxButton>
-                            <BoxButton variant="solid" onClick={handleSubmit}>
-                                Create Agent
-                            </BoxButton>
-                        </ButtonsWrapper>
-                    </FormContainer>
-                </MainContent>
-            </Container>
-        </Modal>
-    );
-};
-
-export default CreateAgentForm;
-
-
-
-
-
-import React, { useState } from 'react';
-import styled, { useTheme } from 'styled-components';
-import { Plus, Bot, Globe, Building, AlertTriangle, CheckCircle } from 'lucide-react';
-import RoundedBox from '@components/atoms/RoundedBox';
-import HorizontalFlexbox from '@components/atoms/HorizontalFlexbox';
-import VerticalFlexbox from '@components/atoms/VerticalFlexbox';
-import { GridContainer } from '@components/atoms/Grid';
-import { TextLabel, SecondaryLabel } from '@components/atoms/Fields';
-import Chip from '@components/atoms/Chip';
-import BoxButton from '@components/atoms/BoxButton';
-import { useToggle } from '@utils/hooks/common/useToggle';
-import CreateAgentForm from '@components/organisms/MonitoringAgent/CreateAgentForm';
-
-// Types
-interface MonitoringAgent {
-    id: number;
-    name: string;
-    aiModel: string;
-    jurisdiction: string;
-    regulator: string;
-    industries: string[];
-    status: 'active' | 'inactive' | 'monitoring' | 'error';
-    lastActive: string;
-    threatsDetected: number;
-    description?: string;
-}
-
-// Mock data
-const mockAgents: MonitoringAgent[] = [
-    {
-        id: 1,
-        name: 'Financial Compliance Monitor',
-        aiModel: 'GPT-4 Turbo',
-        jurisdiction: 'United Kingdom',
-        regulator: 'Financial Conduct Authority (FCA)',
-        industries: ['Banking', 'Investment Services', 'Insurance'],
-        status: 'active',
-        lastActive: '2 minutes ago',
-        threatsDetected: 15,
-        description: 'Monitors FCA regulations and compliance requirements for financial services'
-    },
-    {
-        id: 2,
-        name: 'GDPR Privacy Guardian',
-        aiModel: 'Claude 3',
-        jurisdiction: 'European Union',
-        regulator: 'Data Protection Authority',
-        industries: ['Technology', 'Healthcare', 'Retail'],
-        status: 'monitoring',
-        lastActive: '1 hour ago',
-        threatsDetected: 8,
-        description: 'Tracks GDPR compliance and data protection requirements across EU jurisdictions'
-    },
-    {
-        id: 3,
-        name: 'Healthcare Safety Monitor',
-        aiModel: 'GPT-4',
-        jurisdiction: 'United States',
-        regulator: 'Food and Drug Administration (FDA)',
-        industries: ['Pharmaceuticals', 'Medical Devices', 'Healthcare'],
-        status: 'active',
-        lastActive: '30 minutes ago',
-        threatsDetected: 23,
-        description: 'Monitors FDA guidelines and healthcare safety regulations'
-    },
-    {
-        id: 4,
-        name: 'Environmental Compliance Tracker',
-        aiModel: 'Gemini Pro',
-        jurisdiction: 'Canada',
-        regulator: 'Environment and Climate Change Canada',
-        industries: ['Manufacturing', 'Energy', 'Mining'],
-        status: 'inactive',
-        lastActive: '2 days ago',
-        threatsDetected: 3,
-        description: 'Tracks environmental regulations and climate compliance requirements'
-    }
-];
-
-// Styled Components
-const Container = styled.div`
+const ContentArea = styled.div`
+  height: calc(100vh - 80px);
+  overflow-y: auto;
   padding: 2rem;
+  background-color: ${(props) => props.theme.backgroundPrimary};
 `;
 
-const Header = styled.div`
-  margin-bottom: 2rem;
+const OverallReportContainer = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
 `;
 
-const AgentCard = styled(RoundedBox)`
-  padding: 1.5rem;
-  border: 1px solid ${props => props.theme.borderColor};
-  transition: all 0.2s ease;
+const DetailedReportsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+`;
+
+const ReportCard = styled(RoundedBox)`
+  background: ${(props) => props.theme.cardBg};
+  border: 1px solid ${(props) => props.theme.borderColor};
+  transition: all 0.3s ease;
   cursor: pointer;
   
   &:hover {
-    border-color: ${props => props.theme.primaryColor};
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: ${(props) => props.theme.primaryColor};
+    box-shadow: 0 8px 25px rgba(31, 117, 255, 0.15);
+    transform: translateY(-2px);
+    background: ${(props) => props.theme.cardBgFocus};
   }
 `;
 
-const StatusIndicator = styled.div<{ status: string }>`
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: ${props => {
-        switch (props.status) {
-            case 'active': return '#22c55e';
-            case 'monitoring': return '#f59e0b';
-            case 'inactive': return '#6b7280';
-            case 'error': return '#ef4444';
-            default: return '#6b7280';
-        }
-    }};
-`;
-
-const IndustryChips = styled.div`
+const ReportCardHeader = styled.div`
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
 `;
 
-const AddAgentCard = styled(RoundedBox)`
-  padding: 2rem;
-  border: 2px dashed ${props => props.theme.borderColor};
+const ReportCardTitle = styled(TextLabel)`
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: ${(props) => props.theme.textColor};
+  margin: 0;
+`;
+
+const ReportCardMeta = styled(SecondaryLabel)`
+  font-size: 0.85rem;
+  color: ${(props) => props.theme.labelColorLight};
+  margin-bottom: 1rem;
+`;
+
+const ReportCardStats = styled.div`
+  display: flex;
+  justify-content: space-between;
+  padding-top: 1rem;
+  border-top: 1px solid ${(props) => props.theme.borderColor};
+  align-items: center;
+`;
+
+const StatItem = styled.div`
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const StatLabel = styled.span`
+  font-size: 0.7rem;
+  color: ${(props) => props.theme.secondaryGrey};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+`;
+
+const StatValue = styled.span`
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: ${(props) => props.theme.textColor};
+`;
+
+const CenteredDiv = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+`;
+
+const PlaceholderContent = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 200px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    border-color: ${props => props.theme.primaryColor};
-    background-color: ${props => props.theme.primaryColor}05;
+  height: 100%;
+  text-align: center;
+  color: ${(props) => props.theme.labelColorLight};
+  padding: 3rem;
+`;
+
+const PlaceholderIcon = styled.div`
+  font-size: 5rem;
+  margin-bottom: 2rem;
+  opacity: 0.3;
+  color: ${(props) => props.theme.primaryColor};
+`;
+
+const PlaceholderText = styled.div`
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: ${(props) => props.theme.textColor};
+`;
+
+const PlaceholderSubtext = styled.div`
+  font-size: 1.1rem;
+  opacity: 0.7;
+  max-width: 500px;
+  line-height: 1.6;
+  color: ${(props) => props.theme.labelColorLight};
+`;
+
+const PopoverContainer = styled.div`
+  padding: 1.5rem;
+  min-width: 350px;
+`;
+
+const PriorityBadge = styled.span<{ $priority: 'high' | 'medium' | 'low' }>`
+  padding: 0.375rem 1rem;
+  border-radius: ${(props) => props.theme.borderRadius};
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: ${(props: any) => {
+        switch (props.$priority) {
+            case 'high': return props.theme.redBg;
+            case 'medium': return props.theme.orangeBg;
+            default: return props.theme.hoverColor;
+        }
+    }};
+  color: ${(props: any) => {
+        switch (props.$priority) {
+            case 'high': return props.theme.red;
+            case 'medium': return props.theme.orange;
+            default: return props.theme.primaryColor;
+        }
+    }};
+  border: 1px solid ${(props: any) => {
+        switch (props.$priority) {
+            case 'high': return props.theme.red;
+            case 'medium': return props.theme.orange;
+            default: return props.theme.primaryColor;
+        }
+    }};
+`;
+
+
+
+//interface 
+type Citation = {
+    collection: string;
+    id: string;
+    title: string
+};
+
+interface GazetteReport {
+    id: string;
+    dateAdded: string;
+    content: string;
+    reportType: string;
+    startDate: string;
+    endDate: string;
+    jurisdiction: string[] | null;
+    citation?: Citation[];
+    summary?: string;
+    regulatorName?: string[] | null;
+
+}
+
+// HealthScore Component - Using project atoms and theme colors
+const HealthScore: React.FC<{ score: number }> = ({ score }) => {
+    const theme = useTheme();
+    return (
+        <RoundedBox style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '1.5rem' }}>
+            <FieldLabel style={{ fontSize: '1rem', fontWeight: '600', color: theme.textColor, marginBottom: '1rem' }}>
+                Overall Health Score
+            </FieldLabel>
+            <CircularProgress width={160} height={160} percent={score} includeCenterLabel={true} />
+        </RoundedBox>
+    );
+};
+
+// Updated components using project atoms
+const DetailedReportsView: React.FC<{
+    reports: GazetteReport[];
+}> = ({ reports }) => {
+    const theme = useTheme();
+
+    const getPriority = (type: string) => {
+        if (type.includes('critical') || type.includes('fines')) return 'high';
+        if (type.includes('bill') || type.includes('gazette')) return 'medium';
+        return 'low';
+    };
+
+    const getReportType = (type: string) => {
+        if (type.includes('critical')) return 'Critical';
+        if (type.includes('fines')) return 'Fines';
+        if (type.includes('gazette')) return 'Gazette';
+        if (type.includes('bill')) return 'Bills';
+        if (type.includes("reg")) return "Regulatory";
+        return 'Overall';
+    };
+
+    const getReportTitle = (reportType: string) => {
+        return reportType
+            .replace(/_/g, ' ')
+            .replace(/report/g, 'Report')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    };
+
+    const availableReports = reports.filter((report: GazetteReport) => report && report.content);
+
+    if (availableReports.length === 0) {
+        return (
+            <PlaceholderContent>
+                <PlaceholderIcon>📄</PlaceholderIcon>
+                <PlaceholderText>No Reports Available</PlaceholderText>
+                <PlaceholderSubtext>No regulatory reports found for the current period. Please check your filters or try again later.</PlaceholderSubtext>
+            </PlaceholderContent>
+        );
+    }
+
+    return (
+        <DetailedReportsGrid>
+            {availableReports.map((report: GazetteReport) => {
+                const contentPreview = report.content
+                    ? report.content.replace(/[#*`-]/g, '').substring(0, 200) + '...'
+                    : 'No content available';
+
+                return (
+                    <ReportCard key={report.id}>
+                        <ReportCardHeader>
+                            <ReportCardTitle>
+                                {getReportTitle(report.reportType)}
+                            </ReportCardTitle>
+                            <PriorityBadge $priority={getPriority(report.reportType)}>
+                                {getReportType(report.reportType)}
+                            </PriorityBadge>
+                        </ReportCardHeader>
+
+                        <ReportCardMeta>
+                            {report.startDate} - {report.endDate}
+                            {report?.jurisdiction && ` • ${report?.jurisdiction}`}
+                            {report?.regulatorName && ` • ${report?.regulatorName}`}
+                        </ReportCardMeta>
+
+                        <div style={{ fontSize: '0.9rem', color: theme.labelColor, lineHeight: '1.6', marginBottom: '1rem' }}>
+                            {contentPreview}
+                        </div>
+
+                        <ReportCardStats>
+                            <StatItem>
+                                <StatLabel>Generated</StatLabel>
+                                <StatValue>{new Date(report.dateAdded).toLocaleDateString()}</StatValue>
+                            </StatItem>
+                            {report.citation?.length > 0 && (
+                                <StatItem>
+                                    <StatLabel>Sources</StatLabel>
+                                    <StatValue>{report.citation?.length}</StatValue>
+                                </StatItem>
+                            )}
+                            <StatItem>
+                                <StatLabel>Type</StatLabel>
+                                <StatValue>{report.reportType.replace('_', ' ')}</StatValue>
+                            </StatItem>
+                        </ReportCardStats>
+                    </ReportCard>
+                );
+            })}
+        </DetailedReportsGrid>
+    );
+};
+
+const OverallReportView: React.FC<{
+    reports: GazetteReport[];
+}> = ({ reports }) => {
+    const theme = useTheme();
+
+    // Get the overall/summary report (usually the first one with summary content)
+    const overallReport = reports.find(report =>
+        report && report.content && (
+            report.reportType.toLowerCase().includes('overall') ||
+            report.reportType.toLowerCase().includes('summary') ||
+            report.summary
+        )
+    ) || reports[0]; // Fallback to first report
+
+    if (!overallReport) {
+        return (
+            <PlaceholderContent>
+                <PlaceholderIcon>📊</PlaceholderIcon>
+                <PlaceholderText>No Overall Report Available</PlaceholderText>
+                <PlaceholderSubtext>No overall ESG report found. Please generate a report or try again later.</PlaceholderSubtext>
+            </PlaceholderContent>
+        );
+    }
+
+    return (
+        <OverallReportContainer>
+            <VerticalFlexbox style={{ gap: '1.5rem' }}>
+                <HorizontalFlexbox style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <TextLabel style={{ fontSize: '2rem', fontWeight: '800', color: theme.textColor, margin: '0 0 0.5rem 0' }}>
+                            ESG Overall Report
+                        </TextLabel>
+                        <HorizontalFlexbox style={{ gap: '2rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <HorizontalFlexbox style={{ alignItems: 'center', gap: '0.5rem' }}>
+                                <SecondaryLabel style={{ fontSize: '0.75rem', fontWeight: '600', color: theme.labelColor, textTransform: 'uppercase' }}>
+                                    Jurisdiction
+                                </SecondaryLabel>
+                                <span style={{ fontSize: '0.875rem', fontWeight: '700', color: theme.textColor, padding: '0.375rem 1rem', backgroundColor: theme.cardBgSecondary, borderRadius: theme.borderRadius, border: `1px solid ${theme.borderColor}` }}>
+                                    {overallReport?.jurisdiction?.join(", ") || 'Global'}
+                                </span>
+                            </HorizontalFlexbox>
+                            <HorizontalFlexbox style={{ alignItems: 'center', gap: '0.5rem' }}>
+                                <SecondaryLabel style={{ fontSize: '0.75rem', fontWeight: '600', color: theme.labelColor, textTransform: 'uppercase' }}>
+                                    Updated
+                                </SecondaryLabel>
+                                <span style={{ fontSize: '0.875rem', fontWeight: '700', color: theme.textColor, padding: '0.375rem 1rem', backgroundColor: theme.cardBgSecondary, borderRadius: theme.borderRadius, border: `1px solid ${theme.borderColor}` }}>
+                                    {new Date(overallReport.dateAdded).toLocaleDateString()}
+                                </span>
+                            </HorizontalFlexbox>
+                        </HorizontalFlexbox>
+                    </div>
+                    <HealthScore score={85} />
+                </HorizontalFlexbox>
+
+                <RoundedBox style={{ padding: '2rem' }}>
+                    <EsgCard
+                        key={overallReport.id}
+                        data={[overallReport]}
+                        dataFullWidth={true}
+                    />
+                </RoundedBox>
+            </VerticalFlexbox>
+        </OverallReportContainer>
+    );
+};
+
+//main component
+const EsgAgent: React.FC = () => {
+    const [viewMode, setViewMode] = useState<'overall' | 'detailed'>('overall');
+    const [argsToPropagate, setArgsToPropagate] = useState(ESG_DEFAULT_ARGS);
+    const [currentDate, setCurrentDate] = useState('');
+    const theme = useTheme();
+    const [anchorEl, setAnchorEl] = useState(null);
+    const open = Boolean(anchorEl);
+
+    const fetchEsgMutation = useFetchEsg();
+
+    const handleGenereateReport = () => {
+        console.log(argsToPropagate)
+        fetchEsgMutation.mutate({
+            filter: argsToPropagate
+        })
+    }
+
+    useEffect(() => {
+        fetchEsgMutation.mutate({ filter: argsToPropagate })
+        console.log(fetchEsgMutation.data)
+    }, [])
+
+    useEffect(() => {
+        const date = new Date();
+        setCurrentDate(date.toString().slice(0, 16));
+    }, []);
+
+    const [args, setArgs] = useLocalStorage(
+        'esgFilters',
+        ESG_DEFAULT_ARGS,
+    );
+
+    const handleCloseFilter = () => {
+        setAnchorEl(null);
+    };
+
+    const handleArgs = (value: any) => {
+        console.log('Changing arg');
+        setArgs({ ...args, ...value });
+        setArgsToPropagate((prevArgs: any) => ({ ...prevArgs, ...value }));
+    };
+
+    const handleViewToggle = (checked: boolean) => {
+        setViewMode(checked ? 'detailed' : 'overall');
+    };
+
+    return (
+        <PageContainer>
+            <Container>
+                <StickyTopBar>
+                    <TopBarContent>
+                        <TopBarTitle>
+                            <TextLabel style={{ fontSize: '1.5rem', fontWeight: '800', color: theme.textColor }}>
+                                ESG Agent Dashboard
+                            </TextLabel>
+                            <TextLabel style={{ fontSize: '0.9rem', color: theme.labelColor, fontWeight: '600' }}>
+                                {currentDate}
+                            </TextLabel>
+                        </TopBarTitle>
+                        <TopBarActions>
+                            <ViewToggleContainer>
+                                <ViewToggleLabel>Overall Report</ViewToggleLabel>
+                                <SwitchToggle
+                                    value={viewMode === 'detailed'}
+                                    onChange={(e) => handleViewToggle(e.target.checked)}
+                                />
+                                <ViewToggleLabel>Detailed Reports</ViewToggleLabel>
+                            </ViewToggleContainer>
+
+                            <Badge
+                                color="primary"
+                                badgeContent=""
+                                variant="dot"
+                                invisible={JSON.stringify(args) == ESG_DEFAULT_ARGS_STRINGIFIED}
+                            >
+                                <BoxButton
+                                    icon={<TuneIcon style={{ fontSize: '1rem' }} />}
+                                    onClick={(e: any) => setAnchorEl(e.currentTarget)}
+                                >
+                                    Filters
+                                </BoxButton>
+                            </Badge>
+                        </TopBarActions>
+                    </TopBarContent>
+                </StickyTopBar>
+
+                <Popover
+                    style={{ zIndex: 20 }}
+                    id={'dropdown-popover'}
+                    open={open}
+                    anchorEl={anchorEl}
+                    onClose={handleCloseFilter}
+                    anchorOrigin={{
+                        vertical: 'bottom',
+                        horizontal: 'left',
+                    }}
+                >
+                    <PopoverContainer>
+                        <EsgFilters args={argsToPropagate} onChange={handleArgs} handleGenereateReport={handleGenereateReport} />
+                    </PopoverContainer>
+                </Popover>
+
+                <ContentArea>
+                    {fetchEsgMutation.isLoading ? (
+                        <CenteredDiv>
+                            <LoadingMessage>Fetching ESG data...</LoadingMessage>
+                        </CenteredDiv>
+                    ) : fetchEsgMutation.isError ? (
+                        <CenteredDiv>
+                            <SecondaryLabel>Error fetching ESG data</SecondaryLabel>
+                        </CenteredDiv>
+                    ) : fetchEsgMutation.data ? (
+                        viewMode === 'overall' ? (
+                            <OverallReportView reports={fetchEsgMutation.data.data} />
+                        ) : (
+                            <DetailedReportsView reports={fetchEsgMutation.data.data} />
+                        )
+                    ) : (
+                        <CenteredDiv>
+                            <SecondaryLabel>No ESG data available</SecondaryLabel>
+                        </CenteredDiv>
+                    )}
+                </ContentArea>
+            </Container>
+        </PageContainer>
+    );
+};
+
+export default EsgAgent;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import { SecondaryLabel, TextLabel } from "@components/atoms/Fields";
+import HorizontalFlexbox from "@components/atoms/HorizontalFlexbox";
+import RoundedBox from "@components/atoms/RoundedBox";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import styled, { useTheme } from "styled-components";
+import { openModal } from "react-url-modal";
+
+// Simplified styling using project atoms where possible
+const CitationsWrapper = styled.div`
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+`;
+
+const ContentArea = styled.div`
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: ${(props) => props.theme.textColor};
+`;
+
+const SummaryWrapper = styled(RoundedBox)`
+  background-color: ${(props) => props.theme.hoverColor};
+  border-left: 4px solid ${(props) => props.theme.primaryColor};
+  margin-bottom: 2rem;
+  box-shadow: ${(props) => props.theme.moduleShadow};
+  font-size: 1rem;
+  line-height: 1.7;
+  color: ${(props) => props.theme.textColor};
+  font-weight: 500;
+
+  & > h4 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  & > p {
+    margin: 0.75rem 0;
+    font-size: 1rem;
+    color: ${(props) => props.theme.textColor};
   }
 `;
 
-// Helper functions
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'active': return 'green';
-        case 'monitoring': return 'amber';
-        case 'inactive': return 'grey';
-        case 'error': return 'red';
-        default: return 'grey';
+const CitationButton = styled.button`
+  max-width: 400px;
+  min-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  justify-content: flex-start;
+  background: ${(props) => props.theme.cardBgSecondary};
+  border: 1px solid ${(props) => props.theme.borderColor};
+  cursor: pointer;
+  padding: 0.75rem 1.25rem;
+  border-radius: ${(props) => props.theme.borderRadius};
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  color: ${(props) => props.theme.textColor};
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    background: ${(props) => props.theme.hoverColor};
+    border-color: ${(props) => props.theme.primaryColor};
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(31, 117, 255, 0.15);
+    color: ${(props) => props.theme.primaryColor};
+  }
+`;
+
+const CitationTitle = styled.span`
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  text-align: left;
+  font-weight: 500;
+`;
+
+const CitationsHeader = styled(TextLabel)`
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: ${(props) => props.theme.textColor};
+  margin: 3rem 0 1.5rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid ${(props) => props.theme.borderColor};
+  letter-spacing: -0.025em;
+  display: block;
+`;
+
+// Basic markdown styling - using project theme colors
+const MarkdownContent = styled.div`
+  h1, h2, h3, h4, h5, h6 {
+    color: ${(props) => props.theme.textColor};
+    font-weight: 600;
+    margin: 1.5rem 0 1rem 0;
+    line-height: 1.4;
+  }
+  
+  h1 { font-size: 2rem; border-bottom: 3px solid ${(props) => props.theme.primaryColor}; padding-bottom: 1rem; }
+  h2 { font-size: 1.75rem; border-bottom: 2px solid ${(props) => props.theme.borderColor}; padding-bottom: 0.75rem; }
+  h3 { font-size: 1.5rem; }
+  h4 { font-size: 1.25rem; }
+  h5 { font-size: 1.125rem; }
+  h6 { font-size: 1rem; }
+
+  p {
+    line-height: 1.8;
+    margin: 1.25rem 0;
+    color: ${(props) => props.theme.textColor};
+    font-size: 1rem;
+  }
+
+  strong {
+    font-weight: 700;
+    color: ${(props) => props.theme.textColor};
+  }
+
+  em {
+    font-style: italic;
+    color: ${(props) => props.theme.labelColor};
+  }
+
+  blockquote {
+    margin: 2rem 0;
+    padding: 1.5rem 2rem;
+    border-left: 4px solid ${(props) => props.theme.primaryColor};
+    background: ${(props) => props.theme.cardBgSecondary};
+    color: ${(props) => props.theme.labelColor};
+    font-style: italic;
+    border-radius: 0 ${(props) => props.theme.borderRadius} ${(props) => props.theme.borderRadius} 0;
+    box-shadow: ${(props) => props.theme.moduleShadow};
+    font-size: 1.05rem;
+    line-height: 1.7;
+  }
+
+  hr {
+    border: none;
+    border-top: 2px solid ${(props) => props.theme.borderColor};
+    margin: 3rem 0;
+    width: 100%;
+  }
+
+  ul, ol {
+    margin: 1.5rem 0;
+    padding-left: 2rem;
+    
+    li {
+      margin: 0.75rem 0;
+      line-height: 1.7;
+      color: ${(props) => props.theme.textColor};
     }
+  }
+
+  ul {
+    list-style-type: none;
+    
+    li {
+      position: relative;
+      
+      &::before {
+        content: '•';
+        color: ${(props) => props.theme.primaryColor};
+        font-weight: bold;
+        position: absolute;
+        left: -1.5rem;
+        font-size: 1.2rem;
+      }
+    }
+  }
+
+  ol {
+    list-style-type: decimal;
+    
+    li::marker {
+      color: ${(props) => props.theme.primaryColor};
+      font-weight: 600;
+    }
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+    font-size: 0.95rem;
+    background-color: ${(props) => props.theme.cardBg};
+    border-radius: ${(props) => props.theme.borderRadius};
+    overflow: hidden;
+    box-shadow: ${(props) => props.theme.moduleShadow};
+  }
+
+  th {
+    border: 1px solid ${(props) => props.theme.borderColor};
+    background: ${(props) => props.theme.cardBgSecondary};
+    padding: 1rem;
+    text-align: left;
+    font-weight: 700;
+    color: ${(props) => props.theme.textColor};
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  td {
+    border: 1px solid ${(props) => props.theme.borderColor};
+    padding: 1rem;
+    text-align: left;
+    color: ${(props) => props.theme.labelColor};
+    line-height: 1.6;
+  }
+`;
+
+//interface
+type Citation = {
+    collection: string;
+    id: string;
+    title: string
 };
 
-const formatLastActive = (lastActive: string) => {
-    return `Last active: ${lastActive}`;
-};
+interface GazetteReport {
+    id: string;
+    dateAdded: string;
+    content: string;
+    reportType: string;
+    startDate: string;
+    endDate: string;
+    jurisdiction: string[] | null;
+    citation?: Citation[];
+    summary?: string;
+    regulatorName?: string[] | null;
 
-// Agent Card Component
-const AgentCardComponent: React.FC<{ agent: MonitoringAgent }> = ({ agent }) => {
-    const theme = useTheme();
+}
 
+
+interface CardProps {
+    data: GazetteReport[];
+}
+
+
+//Other components
+const Citation = ({ citationIndex, citation, ...props }) => {
     return (
-        <AgentCard>
-            <VerticalFlexbox className="gap-3">
-                {/* Header with status */}
-                <HorizontalFlexbox className="align-center space-between">
-                    <HorizontalFlexbox className="align-center gap-2">
-                        <Bot size={20} color={theme.primaryColor} />
-                        <TextLabel size="medium" style={{ fontWeight: 600 }}>
-                            {agent.name}
-                        </TextLabel>
-                    </HorizontalFlexbox>
-                    <HorizontalFlexbox className="align-center gap-2">
-                        <StatusIndicator status={agent.status} />
-                        <Chip variant={getStatusColor(agent.status)} size="small">
-                            {agent.status}
-                        </Chip>
-                    </HorizontalFlexbox>
-                </HorizontalFlexbox>
-
-                {/* Description */}
-                {agent.description && (
-                    <SecondaryLabel size="small" style={{ lineHeight: 1.4 }}>
-                        {agent.description}
-                    </SecondaryLabel>
-                )}
-
-                {/* AI Model and Threats */}
-                <GridContainer cols={2} className="gap-3">
-                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '0.75rem' }}>
-                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                            AI Model
-                        </SecondaryLabel>
-                        <TextLabel size="small" style={{ fontWeight: 600 }}>
-                            {agent.aiModel}
-                        </TextLabel>
-                    </RoundedBox>
-
-                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '0.75rem' }}>
-                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                            Threats Detected
-                        </SecondaryLabel>
-                        <HorizontalFlexbox className="align-center gap-1">
-                            <TextLabel size="small" style={{ fontWeight: 600 }}>
-                                {agent.threatsDetected}
-                            </TextLabel>
-                            {agent.threatsDetected > 0 && <AlertTriangle size={14} color={theme.warningColor} />}
-                        </HorizontalFlexbox>
-                    </RoundedBox>
-                </GridContainer>
-
-                {/* Jurisdiction and Regulator */}
-                <VerticalFlexbox className="gap-2">
-                    <HorizontalFlexbox className="align-center gap-2">
-                        <Globe size={16} color={theme.textColorSecondary} />
-                        <SecondaryLabel size="small">Jurisdiction:</SecondaryLabel>
-                        <TextLabel size="small">{agent.jurisdiction}</TextLabel>
-                    </HorizontalFlexbox>
-
-                    <HorizontalFlexbox className="align-center gap-2">
-                        <Building size={16} color={theme.textColorSecondary} />
-                        <SecondaryLabel size="small">Regulator:</SecondaryLabel>
-                        <TextLabel size="small">{agent.regulator}</TextLabel>
-                    </HorizontalFlexbox>
-                </VerticalFlexbox>
-
-                {/* Industries */}
-                <VerticalFlexbox className="gap-1">
-                    <SecondaryLabel size="small">Industries:</SecondaryLabel>
-                    <IndustryChips>
-                        {agent.industries.map((industry, index) => (
-                            <Chip key={index} variant="primary" size="small">
-                                {industry}
-                            </Chip>
-                        ))}
-                    </IndustryChips>
-                </VerticalFlexbox>
-
-                {/* Footer */}
-                <HorizontalFlexbox className="align-center space-between" style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: `1px solid ${theme.borderColor}` }}>
-                    <SecondaryLabel size="xsmall">
-                        {formatLastActive(agent.lastActive)}
-                    </SecondaryLabel>
-                    <HorizontalFlexbox className="align-center gap-1">
-                        <CheckCircle size={12} color={theme.successColor} />
-                        <SecondaryLabel size="xsmall">Operational</SecondaryLabel>
-                    </HorizontalFlexbox>
-                </HorizontalFlexbox>
-            </VerticalFlexbox>
-        </AgentCard>
+        <CitationButton
+            {...props}
+            onClick={() => {
+                if (citation?.collection === 'reg_watch')
+                    openModal({
+                        name: 'HzRegWatchModal',
+                        params: { itemId: citation.id },
+                    });
+                else if (citation?.collection === 'gazette')
+                    openModal({
+                        name: 'HzGazetteModal',
+                        params: { uniqueId: citation.id },
+                    });
+                else if (citation?.collection === 'bill')
+                    openModal({ name: 'HzBillModal', params: { id: citation.id } });
+                else if (citation?.collection === 'committee_hearing')
+                    openModal({
+                        name: 'HzCommitteeHearingInfoModal',
+                        params: { itemId: citation.id },
+                    });
+                else if (citation?.collection == 'web-search')
+                    window.open(citation?.url, '_blank');
+                else if (citation?.collection === 'case_law')
+                    openModal({
+                        name: 'HzCaseLawModal',
+                        params: { itemId: citation.id },
+                    });
+                else if (citation?.collection === 'news_feed')
+                    openModal({
+                        name: 'HzArticleModal',
+                        params: { itemId: citation.id },
+                    });
+                else if (citation?.collection === 'fines_penalties')
+                    openModal({
+                        name: 'HzFinesModal',
+                        params: { itemId: citation.id },
+                    });
+            }}
+            style={{ justifyContent: 'flex-start' }}
+        >
+            <CitationTitle>
+                {`[${citationIndex}] `}
+                {citation?.title}
+            </CitationTitle>
+        </CitationButton>
     );
 };
 
-// Main Component
-const MonitoringAgentDashboard: React.FC = () => {
-    const [agents, setAgents] = useState<MonitoringAgent[]>(mockAgents);
-    const [showAddModal, toggleAddModal] = useToggle(false);
-    const theme = useTheme();
 
-    const handleAddAgent = (newAgent: Partial<MonitoringAgent>) => {
-        const agent: MonitoringAgent = {
-            id: Math.max(...agents.map(a => a.id)) + 1,
-            name: newAgent.name || '',
-            aiModel: newAgent.aiModel || '',
-            jurisdiction: newAgent.jurisdiction || '',
-            regulator: newAgent.regulator || '',
-            industries: newAgent.industries || [],
-            status: 'active',
-            lastActive: 'Just now',
-            threatsDetected: 0,
-            description: newAgent.description
-        };
-        setAgents(prev => [...prev, agent]);
+
+// Main Component - Using project atoms and simplified styling
+const EsgCard: React.FC<CardProps> = ({ data }) => {
+    let content = data?.[0] || {
+        citation: [],
+        content: 'No content available.',
+        dateAdded: { $date: new Date().toISOString() },
+        endDate: '',
+        reportType: 'unknown',
+        startDate: '',
+        _id: '',
+        jurisdiction: null
     };
 
-    const activeAgents = agents.filter(a => a.status === 'active').length;
-    const totalThreats = agents.reduce((sum, a) => sum + a.threatsDetected, 0);
-
     return (
-        <Container>
-            {/* Header Section */}
-            <Header>
-                <HorizontalFlexbox className="align-center space-between mb-4">
-                    <VerticalFlexbox>
-                        <TextLabel size="large" style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
-                            Monitoring Agent Dashboard
-                        </TextLabel>
-                        <SecondaryLabel>
-                            Manage your AI-powered regulatory monitoring agents
-                        </SecondaryLabel>
-                    </VerticalFlexbox>
+        <RoundedBox style={{ padding: '0', background: 'transparent', border: 'none' }}>
+            <ContentArea>
+                {content?.summary && (
+                    <SummaryWrapper>
+                        <MarkdownContent>
+                            <Markdown remarkPlugins={[remarkGfm]}>
+                                {content?.summary}
+                            </Markdown>
+                        </MarkdownContent>
+                    </SummaryWrapper>
+                )}
 
-                    <BoxButton
-                        variant="solid"
-                        icon={<Plus size={16} />}
-                        onClick={toggleAddModal}
-                    >
-                        Add Agent
-                    </BoxButton>
-                </HorizontalFlexbox>
+                <MarkdownContent>
+                    <Markdown remarkPlugins={[remarkGfm]}>
+                        {content.content}
+                    </Markdown>
+                </MarkdownContent>
 
-                {/* Stats */}
-                <GridContainer cols={3} className="gap-4 mb-6">
-                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '1rem' }}>
-                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                            Active Agents
-                        </SecondaryLabel>
-                        <TextLabel size="large" style={{ fontWeight: 700, color: theme.successColor }}>
-                            {activeAgents} / {agents.length}
-                        </TextLabel>
-                    </RoundedBox>
-
-                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '1rem' }}>
-                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                            Total Threats Detected
-                        </SecondaryLabel>
-                        <TextLabel size="large" style={{ fontWeight: 700, color: theme.warningColor }}>
-                            {totalThreats}
-                        </TextLabel>
-                    </RoundedBox>
-
-                    <RoundedBox style={{ background: theme.cardBgSecondary, padding: '1rem' }}>
-                        <SecondaryLabel size="xsmall" style={{ textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                            Coverage
-                        </SecondaryLabel>
-                        <TextLabel size="large" style={{ fontWeight: 700, color: theme.primaryColor }}>
-                            {[...new Set(agents.map(a => a.jurisdiction))].length} Jurisdictions
-                        </TextLabel>
-                    </RoundedBox>
-                </GridContainer>
-            </Header>
-
-            {/* Agents Grid */}
-            <GridContainer cols={3} className="gap-6">
-                {agents.map(agent => (
-                    <AgentCardComponent key={agent.id} agent={agent} />
-                ))}
-
-                {/* Add Agent Card */}
-                <AddAgentCard onClick={toggleAddModal}>
-                    <Plus size={32} color={theme.textColorSecondary} style={{ marginBottom: '1rem' }} />
-                    <TextLabel style={{ color: theme.textColorSecondary, textAlign: 'center' }}>
-                        Add New Agent
-                    </TextLabel>
-                    <SecondaryLabel size="small" style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                        Deploy a new monitoring agent to track regulatory changes
-                    </SecondaryLabel>
-                </AddAgentCard>
-            </GridContainer>
-
-            {/* Create Agent Form */}
-            <CreateAgentForm
-                isOpen={showAddModal}
-                onClose={toggleAddModal}
-                onSubmit={handleAddAgent}
-            />
-        </Container>
+                {content?.citation && content.citation.length > 0 && (
+                    <div>
+                        <CitationsHeader>
+                            Citations
+                        </CitationsHeader>
+                        <CitationsWrapper>
+                            {content.citation.map((citation, index) => (
+                                <Citation
+                                    key={index}
+                                    citationIndex={index + 1}
+                                    citation={citation}
+                                />
+                            ))}
+                        </CitationsWrapper>
+                    </div>
+                )}
+            </ContentArea>
+        </RoundedBox>
     );
 };
 
-export default MonitoringAgentDashboard;
+
+export default EsgCard;
