@@ -60,17 +60,58 @@ const TopBarActions = styled.div`
 const ViewToggleContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 1rem;
-  background-color: ${(props) => props.theme.cardBgSecondary};
-  border-radius: ${(props) => props.theme.borderRadius};
-  border: 1px solid ${(props) => props.theme.borderColor};
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: ${(props) => props.theme.cardBg};
+  border-radius: 50px;
+  border: 2px solid ${(props) => props.theme.borderColor};
+  box-shadow: ${(props) => props.theme.moduleShadow};
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: ${(props) => props.theme.primaryColor};
+    box-shadow: 0 4px 15px rgba(31, 117, 255, 0.15);
+  }
 `;
 
-const ViewToggleLabel = styled(SecondaryLabel)`
+const ViewToggleLabel = styled(SecondaryLabel) <{ $active?: boolean }>`
   font-size: 0.875rem;
-  font-weight: 600;
-  color: ${(props) => props.theme.labelColor};
+  font-weight: 700;
+  color: ${(props) => props.$active ? props.theme.primaryColor : props.theme.labelColor};
+  transition: color 0.3s ease;
+  white-space: nowrap;
+  user-select: none;
+`;
+
+const ToggleSwitch = styled.div`
+  position: relative;
+  width: 60px;
+  height: 32px;
+  background: ${(props) => props.theme.borderColor};
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  
+  &.active {
+    background: ${(props) => props.theme.primaryColor};
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 28px;
+    height: 28px;
+    background: ${(props) => props.theme.cardBg};
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  &.active::after {
+    transform: translateX(28px);
+  }
 `;
 
 const ContentArea = styled.div`
@@ -78,19 +119,36 @@ const ContentArea = styled.div`
   overflow-y: auto;
   padding: 2rem;
   background-color: ${(props) => props.theme.backgroundPrimary};
+  display: flex;
+  gap: 2rem;
+`;
+
+const DetailedViewContainer = styled.div`
+  display: flex;
+  width: 100%;
+  gap: 2rem;
+`;
+
+const Sidebar = styled.div`
+  width: 350px;
+  flex-shrink: 0;
+`;
+
+const MainContent = styled.div`
+  flex: 1;
+  overflow-y: auto;
 `;
 
 const OverallReportContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
 `;
 
 const DetailedReportsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
-  max-width: 1400px;
-  margin: 0 auto;
 `;
 
 const ReportCard = styled(RoundedBox)`
@@ -105,6 +163,49 @@ const ReportCard = styled(RoundedBox)`
     transform: translateY(-2px);
     background: ${(props) => props.theme.cardBgFocus};
   }
+`;
+
+const SidebarCard = styled(RoundedBox)`
+  background: ${(props) => props.theme.cardBg};
+  border: 1px solid ${(props) => props.theme.borderColor};
+  margin-bottom: 1rem;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: ${(props) => props.theme.primaryColor};
+    box-shadow: 0 4px 12px rgba(31, 117, 255, 0.1);
+  }
+  
+  &.active {
+    border-color: ${(props) => props.theme.primaryColor};
+    background: ${(props) => props.theme.hoverColor};
+  }
+`;
+
+const SidebarTitle = styled(TextLabel)`
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: ${(props) => props.theme.textColor};
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+`;
+
+const SidebarMeta = styled(SecondaryLabel)`
+  font-size: 0.75rem;
+  color: ${(props) => props.theme.labelColor};
+  margin-bottom: 0.5rem;
+`;
+
+const SidebarPreview = styled.div`
+  font-size: 0.8rem;
+  color: ${(props) => props.theme.labelColorLight};
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `;
 
 const ReportCardHeader = styled.div`
@@ -267,11 +368,12 @@ const HealthScore: React.FC<{ score: number }> = ({ score }) => {
     );
 };
 
-// Updated components using project atoms
+// Updated components using project atoms - Restored sidebar layout
 const DetailedReportsView: React.FC<{
     reports: GazetteReport[];
 }> = ({ reports }) => {
     const theme = useTheme();
+    const [selectedReport, setSelectedReport] = useState<GazetteReport | null>(null);
 
     const getPriority = (type: string) => {
         if (type.includes('critical') || type.includes('fines')) return 'high';
@@ -299,6 +401,13 @@ const DetailedReportsView: React.FC<{
 
     const availableReports = reports.filter((report: GazetteReport) => report && report.content);
 
+    // Set first report as selected by default
+    React.useEffect(() => {
+        if (availableReports.length > 0 && !selectedReport) {
+            setSelectedReport(availableReports[0]);
+        }
+    }, [availableReports, selectedReport]);
+
     if (availableReports.length === 0) {
         return (
             <PlaceholderContent>
@@ -310,53 +419,91 @@ const DetailedReportsView: React.FC<{
     }
 
     return (
-        <DetailedReportsGrid>
-            {availableReports.map((report: GazetteReport) => {
-                const contentPreview = report.content
-                    ? report.content.replace(/[#*`-]/g, '').substring(0, 200) + '...'
-                    : 'No content available';
+        <DetailedViewContainer>
+            <Sidebar>
+                <TextLabel style={{ fontSize: '1.25rem', fontWeight: '700', color: theme.textColor, marginBottom: '1.5rem' }}>
+                    Available Reports
+                </TextLabel>
+                {availableReports.map((report: GazetteReport) => {
+                    const contentPreview = report.content
+                        ? report.content.replace(/[#*`-]/g, '').substring(0, 80) + '...'
+                        : 'No content available';
 
-                return (
-                    <ReportCard key={report.id}>
-                        <ReportCardHeader>
-                            <ReportCardTitle>
-                                {getReportTitle(report.reportType)}
-                            </ReportCardTitle>
-                            <PriorityBadge $priority={getPriority(report.reportType)}>
-                                {getReportType(report.reportType)}
-                            </PriorityBadge>
-                        </ReportCardHeader>
+                    return (
+                        <SidebarCard
+                            key={report.id}
+                            className={selectedReport?.id === report.id ? 'active' : ''}
+                            onClick={() => setSelectedReport(report)}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                                <SidebarTitle>
+                                    {getReportTitle(report.reportType)}
+                                </SidebarTitle>
+                                <PriorityBadge $priority={getPriority(report.reportType)} style={{ fontSize: '0.6rem', padding: '0.25rem 0.5rem' }}>
+                                    {getReportType(report.reportType)}
+                                </PriorityBadge>
+                            </div>
 
-                        <ReportCardMeta>
-                            {report.startDate} - {report.endDate}
-                            {report?.jurisdiction && ` • ${report?.jurisdiction}`}
-                            {report?.regulatorName && ` • ${report?.regulatorName}`}
-                        </ReportCardMeta>
+                            <SidebarMeta>
+                                {new Date(report.dateAdded).toLocaleDateString()}
+                                {report?.jurisdiction && ` • ${report?.jurisdiction}`}
+                            </SidebarMeta>
 
-                        <div style={{ fontSize: '0.9rem', color: theme.labelColor, lineHeight: '1.6', marginBottom: '1rem' }}>
-                            {contentPreview}
+                            <SidebarPreview>
+                                {contentPreview}
+                            </SidebarPreview>
+                        </SidebarCard>
+                    );
+                })}
+            </Sidebar>
+
+            <MainContent>
+                {selectedReport ? (
+                    <RoundedBox style={{ padding: '2rem', height: 'fit-content' }}>
+                        <div style={{ marginBottom: '2rem' }}>
+                            <TextLabel style={{ fontSize: '2rem', fontWeight: '700', color: theme.textColor, margin: '0 0 1rem 0' }}>
+                                {getReportTitle(selectedReport.reportType)}
+                            </TextLabel>
+                            <HorizontalFlexbox style={{ gap: '2rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                                <HorizontalFlexbox style={{ alignItems: 'center', gap: '0.5rem' }}>
+                                    <SecondaryLabel style={{ fontSize: '0.75rem', fontWeight: '600', color: theme.labelColor, textTransform: 'uppercase' }}>
+                                        Generated
+                                    </SecondaryLabel>
+                                    <span style={{ fontSize: '0.875rem', fontWeight: '700', color: theme.textColor, padding: '0.375rem 1rem', backgroundColor: theme.cardBgSecondary, borderRadius: theme.borderRadius, border: `1px solid ${theme.borderColor}` }}>
+                                        {new Date(selectedReport.dateAdded).toLocaleDateString()}
+                                    </span>
+                                </HorizontalFlexbox>
+                                {selectedReport?.jurisdiction && (
+                                    <HorizontalFlexbox style={{ alignItems: 'center', gap: '0.5rem' }}>
+                                        <SecondaryLabel style={{ fontSize: '0.75rem', fontWeight: '600', color: theme.labelColor, textTransform: 'uppercase' }}>
+                                            Jurisdiction
+                                        </SecondaryLabel>
+                                        <span style={{ fontSize: '0.875rem', fontWeight: '700', color: theme.textColor, padding: '0.375rem 1rem', backgroundColor: theme.cardBgSecondary, borderRadius: theme.borderRadius, border: `1px solid ${theme.borderColor}` }}>
+                                            {selectedReport.jurisdiction.join(", ")}
+                                        </span>
+                                    </HorizontalFlexbox>
+                                )}
+                                <PriorityBadge $priority={getPriority(selectedReport.reportType)}>
+                                    {getReportType(selectedReport.reportType)}
+                                </PriorityBadge>
+                            </HorizontalFlexbox>
                         </div>
 
-                        <ReportCardStats>
-                            <StatItem>
-                                <StatLabel>Generated</StatLabel>
-                                <StatValue>{new Date(report.dateAdded).toLocaleDateString()}</StatValue>
-                            </StatItem>
-                            {report.citation?.length > 0 && (
-                                <StatItem>
-                                    <StatLabel>Sources</StatLabel>
-                                    <StatValue>{report.citation?.length}</StatValue>
-                                </StatItem>
-                            )}
-                            <StatItem>
-                                <StatLabel>Type</StatLabel>
-                                <StatValue>{report.reportType.replace('_', ' ')}</StatValue>
-                            </StatItem>
-                        </ReportCardStats>
-                    </ReportCard>
-                );
-            })}
-        </DetailedReportsGrid>
+                        <EsgCard
+                            key={selectedReport.id}
+                            data={[selectedReport]}
+                            dataFullWidth={true}
+                        />
+                    </RoundedBox>
+                ) : (
+                    <PlaceholderContent>
+                        <PlaceholderIcon>📄</PlaceholderIcon>
+                        <PlaceholderText>Select a Report</PlaceholderText>
+                        <PlaceholderSubtext>Choose a report from the sidebar to view its details.</PlaceholderSubtext>
+                    </PlaceholderContent>
+                )}
+            </MainContent>
+        </DetailedViewContainer>
     );
 };
 
@@ -488,12 +635,12 @@ const EsgAgent: React.FC = () => {
                         </TopBarTitle>
                         <TopBarActions>
                             <ViewToggleContainer>
-                                <ViewToggleLabel>Overall Report</ViewToggleLabel>
-                                <SwitchToggle
-                                    value={viewMode === 'detailed'}
-                                    onChange={(e) => handleViewToggle(e.target.checked)}
+                                <ViewToggleLabel $active={viewMode === 'overall'}>Overall Report</ViewToggleLabel>
+                                <ToggleSwitch
+                                    className={viewMode === 'detailed' ? 'active' : ''}
+                                    onClick={() => handleViewToggle(viewMode === 'overall')}
                                 />
-                                <ViewToggleLabel>Detailed Reports</ViewToggleLabel>
+                                <ViewToggleLabel $active={viewMode === 'detailed'}>Detailed Reports</ViewToggleLabel>
                             </ViewToggleContainer>
 
                             <Badge
@@ -529,13 +676,13 @@ const EsgAgent: React.FC = () => {
                     </PopoverContainer>
                 </Popover>
 
-                <ContentArea>
+                <ContentArea style={{ flexDirection: viewMode === 'overall' ? 'column' : 'row', padding: viewMode === 'overall' ? '2rem' : '1.5rem' }}>
                     {fetchEsgMutation.isLoading ? (
-                        <CenteredDiv>
+                        <CenteredDiv style={{ width: '100%' }}>
                             <LoadingMessage>Fetching ESG data...</LoadingMessage>
                         </CenteredDiv>
                     ) : fetchEsgMutation.isError ? (
-                        <CenteredDiv>
+                        <CenteredDiv style={{ width: '100%' }}>
                             <SecondaryLabel>Error fetching ESG data</SecondaryLabel>
                         </CenteredDiv>
                     ) : fetchEsgMutation.data ? (
@@ -545,7 +692,7 @@ const EsgAgent: React.FC = () => {
                             <DetailedReportsView reports={fetchEsgMutation.data.data} />
                         )
                     ) : (
-                        <CenteredDiv>
+                        <CenteredDiv style={{ width: '100%' }}>
                             <SecondaryLabel>No ESG data available</SecondaryLabel>
                         </CenteredDiv>
                     )}
@@ -556,379 +703,3 @@ const EsgAgent: React.FC = () => {
 };
 
 export default EsgAgent;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import { SecondaryLabel, TextLabel } from "@components/atoms/Fields";
-import HorizontalFlexbox from "@components/atoms/HorizontalFlexbox";
-import RoundedBox from "@components/atoms/RoundedBox";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import styled, { useTheme } from "styled-components";
-import { openModal } from "react-url-modal";
-
-// Simplified styling using project atoms where possible
-const CitationsWrapper = styled.div`
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-top: 1.5rem;
-`;
-
-const ContentArea = styled.div`
-  font-size: 0.9rem;
-  line-height: 1.7;
-  color: ${(props) => props.theme.textColor};
-`;
-
-const SummaryWrapper = styled(RoundedBox)`
-  background-color: ${(props) => props.theme.hoverColor};
-  border-left: 4px solid ${(props) => props.theme.primaryColor};
-  margin-bottom: 2rem;
-  box-shadow: ${(props) => props.theme.moduleShadow};
-  font-size: 1rem;
-  line-height: 1.7;
-  color: ${(props) => props.theme.textColor};
-  font-weight: 500;
-
-  & > h4 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-  }
-
-  & > p {
-    margin: 0.75rem 0;
-    font-size: 1rem;
-    color: ${(props) => props.theme.textColor};
-  }
-`;
-
-const CitationButton = styled.button`
-  max-width: 400px;
-  min-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  justify-content: flex-start;
-  background: ${(props) => props.theme.cardBgSecondary};
-  border: 1px solid ${(props) => props.theme.borderColor};
-  cursor: pointer;
-  padding: 0.75rem 1.25rem;
-  border-radius: ${(props) => props.theme.borderRadius};
-  transition: all 0.3s ease;
-  font-size: 0.85rem;
-  color: ${(props) => props.theme.textColor};
-  display: flex;
-  align-items: center;
-
-  &:hover {
-    background: ${(props) => props.theme.hoverColor};
-    border-color: ${(props) => props.theme.primaryColor};
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(31, 117, 255, 0.15);
-    color: ${(props) => props.theme.primaryColor};
-  }
-`;
-
-const CitationTitle = styled.span`
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: 0.85rem;
-  text-align: left;
-  font-weight: 500;
-`;
-
-const CitationsHeader = styled(TextLabel)`
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: ${(props) => props.theme.textColor};
-  margin: 3rem 0 1.5rem 0;
-  padding-bottom: 0.75rem;
-  border-bottom: 2px solid ${(props) => props.theme.borderColor};
-  letter-spacing: -0.025em;
-  display: block;
-`;
-
-// Basic markdown styling - using project theme colors
-const MarkdownContent = styled.div`
-  h1, h2, h3, h4, h5, h6 {
-    color: ${(props) => props.theme.textColor};
-    font-weight: 600;
-    margin: 1.5rem 0 1rem 0;
-    line-height: 1.4;
-  }
-  
-  h1 { font-size: 2rem; border-bottom: 3px solid ${(props) => props.theme.primaryColor}; padding-bottom: 1rem; }
-  h2 { font-size: 1.75rem; border-bottom: 2px solid ${(props) => props.theme.borderColor}; padding-bottom: 0.75rem; }
-  h3 { font-size: 1.5rem; }
-  h4 { font-size: 1.25rem; }
-  h5 { font-size: 1.125rem; }
-  h6 { font-size: 1rem; }
-
-  p {
-    line-height: 1.8;
-    margin: 1.25rem 0;
-    color: ${(props) => props.theme.textColor};
-    font-size: 1rem;
-  }
-
-  strong {
-    font-weight: 700;
-    color: ${(props) => props.theme.textColor};
-  }
-
-  em {
-    font-style: italic;
-    color: ${(props) => props.theme.labelColor};
-  }
-
-  blockquote {
-    margin: 2rem 0;
-    padding: 1.5rem 2rem;
-    border-left: 4px solid ${(props) => props.theme.primaryColor};
-    background: ${(props) => props.theme.cardBgSecondary};
-    color: ${(props) => props.theme.labelColor};
-    font-style: italic;
-    border-radius: 0 ${(props) => props.theme.borderRadius} ${(props) => props.theme.borderRadius} 0;
-    box-shadow: ${(props) => props.theme.moduleShadow};
-    font-size: 1.05rem;
-    line-height: 1.7;
-  }
-
-  hr {
-    border: none;
-    border-top: 2px solid ${(props) => props.theme.borderColor};
-    margin: 3rem 0;
-    width: 100%;
-  }
-
-  ul, ol {
-    margin: 1.5rem 0;
-    padding-left: 2rem;
-    
-    li {
-      margin: 0.75rem 0;
-      line-height: 1.7;
-      color: ${(props) => props.theme.textColor};
-    }
-  }
-
-  ul {
-    list-style-type: none;
-    
-    li {
-      position: relative;
-      
-      &::before {
-        content: '•';
-        color: ${(props) => props.theme.primaryColor};
-        font-weight: bold;
-        position: absolute;
-        left: -1.5rem;
-        font-size: 1.2rem;
-      }
-    }
-  }
-
-  ol {
-    list-style-type: decimal;
-    
-    li::marker {
-      color: ${(props) => props.theme.primaryColor};
-      font-weight: 600;
-    }
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 2rem 0;
-    font-size: 0.95rem;
-    background-color: ${(props) => props.theme.cardBg};
-    border-radius: ${(props) => props.theme.borderRadius};
-    overflow: hidden;
-    box-shadow: ${(props) => props.theme.moduleShadow};
-  }
-
-  th {
-    border: 1px solid ${(props) => props.theme.borderColor};
-    background: ${(props) => props.theme.cardBgSecondary};
-    padding: 1rem;
-    text-align: left;
-    font-weight: 700;
-    color: ${(props) => props.theme.textColor};
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  td {
-    border: 1px solid ${(props) => props.theme.borderColor};
-    padding: 1rem;
-    text-align: left;
-    color: ${(props) => props.theme.labelColor};
-    line-height: 1.6;
-  }
-`;
-
-//interface
-type Citation = {
-    collection: string;
-    id: string;
-    title: string
-};
-
-interface GazetteReport {
-    id: string;
-    dateAdded: string;
-    content: string;
-    reportType: string;
-    startDate: string;
-    endDate: string;
-    jurisdiction: string[] | null;
-    citation?: Citation[];
-    summary?: string;
-    regulatorName?: string[] | null;
-
-}
-
-
-interface CardProps {
-    data: GazetteReport[];
-}
-
-
-//Other components
-const Citation = ({ citationIndex, citation, ...props }) => {
-    return (
-        <CitationButton
-            {...props}
-            onClick={() => {
-                if (citation?.collection === 'reg_watch')
-                    openModal({
-                        name: 'HzRegWatchModal',
-                        params: { itemId: citation.id },
-                    });
-                else if (citation?.collection === 'gazette')
-                    openModal({
-                        name: 'HzGazetteModal',
-                        params: { uniqueId: citation.id },
-                    });
-                else if (citation?.collection === 'bill')
-                    openModal({ name: 'HzBillModal', params: { id: citation.id } });
-                else if (citation?.collection === 'committee_hearing')
-                    openModal({
-                        name: 'HzCommitteeHearingInfoModal',
-                        params: { itemId: citation.id },
-                    });
-                else if (citation?.collection == 'web-search')
-                    window.open(citation?.url, '_blank');
-                else if (citation?.collection === 'case_law')
-                    openModal({
-                        name: 'HzCaseLawModal',
-                        params: { itemId: citation.id },
-                    });
-                else if (citation?.collection === 'news_feed')
-                    openModal({
-                        name: 'HzArticleModal',
-                        params: { itemId: citation.id },
-                    });
-                else if (citation?.collection === 'fines_penalties')
-                    openModal({
-                        name: 'HzFinesModal',
-                        params: { itemId: citation.id },
-                    });
-            }}
-            style={{ justifyContent: 'flex-start' }}
-        >
-            <CitationTitle>
-                {`[${citationIndex}] `}
-                {citation?.title}
-            </CitationTitle>
-        </CitationButton>
-    );
-};
-
-
-
-// Main Component - Using project atoms and simplified styling
-const EsgCard: React.FC<CardProps> = ({ data }) => {
-    let content = data?.[0] || {
-        citation: [],
-        content: 'No content available.',
-        dateAdded: { $date: new Date().toISOString() },
-        endDate: '',
-        reportType: 'unknown',
-        startDate: '',
-        _id: '',
-        jurisdiction: null
-    };
-
-    return (
-        <RoundedBox style={{ padding: '0', background: 'transparent', border: 'none' }}>
-            <ContentArea>
-                {content?.summary && (
-                    <SummaryWrapper>
-                        <MarkdownContent>
-                            <Markdown remarkPlugins={[remarkGfm]}>
-                                {content?.summary}
-                            </Markdown>
-                        </MarkdownContent>
-                    </SummaryWrapper>
-                )}
-
-                <MarkdownContent>
-                    <Markdown remarkPlugins={[remarkGfm]}>
-                        {content.content}
-                    </Markdown>
-                </MarkdownContent>
-
-                {content?.citation && content.citation.length > 0 && (
-                    <div>
-                        <CitationsHeader>
-                            Citations
-                        </CitationsHeader>
-                        <CitationsWrapper>
-                            {content.citation.map((citation, index) => (
-                                <Citation
-                                    key={index}
-                                    citationIndex={index + 1}
-                                    citation={citation}
-                                />
-                            ))}
-                        </CitationsWrapper>
-                    </div>
-                )}
-            </ContentArea>
-        </RoundedBox>
-    );
-};
-
-
-export default EsgCard;
