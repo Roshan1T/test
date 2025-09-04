@@ -8,7 +8,8 @@ import CircularProgress from "@components/atoms/CircularProgress";
 import { Badge, Popover } from '@mui/material';
 import useLocalStorage from "@utils/hooks/useLocalStorage";
 import BoxButton from "@components/atoms/BoxButton";
-import SwitchToggle from "@components/atoms/Switch";
+import PillButton from "@components/atoms/PillButton";
+import LabelledToggleButton from "@components/atoms/Buttons/LabelledToggleButton";
 import TuneIcon from '@mui/icons-material/Tune';
 import EsgCard from "./EsgCard";
 import EsgFilters, { ESG_DEFAULT_ARGS, ESG_DEFAULT_ARGS_STRINGIFIED } from "@components/organisms/ESG/EsgFilters";
@@ -57,61 +58,36 @@ const TopBarActions = styled.div`
   gap: 1rem;
 `;
 
-const ViewToggleContainer = styled.div`
+const ViewToggleContainer = styled(HorizontalFlexbox)`
+  gap: 0.5rem;
+  padding: 0.25rem;
+  background: ${(props) => props.theme.cardBgSecondary};
+  border-radius: 8px;
+  border: 1px solid ${(props) => props.theme.borderColor};
+`;
+
+const ContentArea = styled.div`
+  height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 2rem;
+  background-color: ${(props) => props.theme.backgroundPrimary};
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  background: ${(props) => props.theme.cardBg};
-  border-radius: 50px;
-  border: 2px solid ${(props) => props.theme.borderColor};
-  box-shadow: ${(props) => props.theme.moduleShadow};
-  transition: all 0.3s ease;
-  
-  &:hover {
-    border-color: ${(props) => props.theme.primaryColor};
-    box-shadow: 0 4px 15px rgba(31, 117, 255, 0.15);
-  }
+  gap: 2rem;
 `;
 
-const ViewToggleLabel = styled(SecondaryLabel) <{ $active?: boolean }>`
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: ${(props) => props.$active ? props.theme.primaryColor : props.theme.labelColor};
-  transition: color 0.3s ease;
-  white-space: nowrap;
-  user-select: none;
+const Sidebar = styled.div`
+  width: 350px;
+  flex-shrink: 0;
 `;
 
-const ToggleSwitch = styled.div`
-  position: relative;
-  width: 60px;
-  height: 32px;
-  background: ${(props) => props.theme.borderColor};
-  border-radius: 20px;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  
-  &.active {
-    background: ${(props) => props.theme.primaryColor};
-  }
-  
-  &::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 28px;
-    height: 28px;
-    background: ${(props) => props.theme.cardBg};
-    border-radius: 50%;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
-  
-  &.active::after {
-    transform: translateX(28px);
-  }
+const MainContent = styled.div`
+  flex: 1;
+  overflow-y: auto;
+`;
+
+const PopoverContainer = styled.div`
+  padding: 1.5rem;
+  min-width: 350px;
 `;
 
 const ContentArea = styled.div`
@@ -419,7 +395,7 @@ const DetailedReportsView: React.FC<{
     }
 
     return (
-        <DetailedViewContainer>
+        <HorizontalFlexbox style={{ width: '100%', gap: '2rem' }}>
             <Sidebar>
                 <TextLabel style={{ fontSize: '1.25rem', fontWeight: '700', color: theme.textColor, marginBottom: '1.5rem' }}>
                     Available Reports
@@ -430,29 +406,44 @@ const DetailedReportsView: React.FC<{
                         : 'No content available';
 
                     return (
-                        <SidebarCard
+                        <RoundedBox
                             key={report.id}
-                            className={selectedReport?.id === report.id ? 'active' : ''}
+                            style={{
+                                marginBottom: '1rem',
+                                padding: '1rem',
+                                cursor: 'pointer',
+                                border: selectedReport?.id === report.id ? `2px solid ${theme.primaryColor}` : `1px solid ${theme.borderColor}`,
+                                backgroundColor: selectedReport?.id === report.id ? theme.hoverColor : theme.cardBg,
+                                transition: 'all 0.3s ease'
+                            }}
                             onClick={() => setSelectedReport(report)}
                         >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                <SidebarTitle>
+                            <HorizontalFlexbox style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                                <TextLabel style={{ fontSize: '0.9rem', fontWeight: '700', color: theme.textColor, margin: '0 0 0.5rem 0', lineHeight: '1.3' }}>
                                     {getReportTitle(report.reportType)}
-                                </SidebarTitle>
+                                </TextLabel>
                                 <PriorityBadge $priority={getPriority(report.reportType)} style={{ fontSize: '0.6rem', padding: '0.25rem 0.5rem' }}>
                                     {getReportType(report.reportType)}
                                 </PriorityBadge>
-                            </div>
+                            </HorizontalFlexbox>
 
-                            <SidebarMeta>
+                            <SecondaryLabel style={{ fontSize: '0.75rem', color: theme.labelColor, marginBottom: '0.5rem' }}>
                                 {new Date(report.dateAdded).toLocaleDateString()}
                                 {report?.jurisdiction && ` • ${report?.jurisdiction}`}
-                            </SidebarMeta>
+                            </SecondaryLabel>
 
-                            <SidebarPreview>
+                            <div style={{
+                                fontSize: '0.8rem',
+                                color: theme.labelColorLight,
+                                lineHeight: '1.4',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                            }}>
                                 {contentPreview}
-                            </SidebarPreview>
-                        </SidebarCard>
+                            </div>
+                        </RoundedBox>
                     );
                 })}
             </Sidebar>
@@ -503,7 +494,7 @@ const DetailedReportsView: React.FC<{
                     </PlaceholderContent>
                 )}
             </MainContent>
-        </DetailedViewContainer>
+        </HorizontalFlexbox>
     );
 };
 
@@ -624,26 +615,30 @@ const EsgAgent: React.FC = () => {
         <PageContainer>
             <Container>
                 <StickyTopBar>
-                    <TopBarContent>
-                        <TopBarTitle>
+                    <HorizontalFlexbox style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                        <HorizontalFlexbox style={{ alignItems: 'center', gap: '1.5rem' }}>
                             <TextLabel style={{ fontSize: '1.5rem', fontWeight: '800', color: theme.textColor }}>
                                 ESG Agent Dashboard
                             </TextLabel>
                             <TextLabel style={{ fontSize: '0.9rem', color: theme.labelColor, fontWeight: '600' }}>
                                 {currentDate}
                             </TextLabel>
-                        </TopBarTitle>
-                        <TopBarActions>
+                        </HorizontalFlexbox>
+                        <HorizontalFlexbox style={{ alignItems: 'center', gap: '1rem' }}>
                             <ViewToggleContainer>
-                                <ViewToggleLabel $active={viewMode === 'overall'}>Overall Report</ViewToggleLabel>
-                                <ToggleSwitch
-                                    className={viewMode === 'detailed' ? 'active' : ''}
-                                    onClick={() => handleViewToggle(viewMode === 'overall')}
-                                />
-                                <ViewToggleLabel $active={viewMode === 'detailed'}>Detailed Reports</ViewToggleLabel>
-                            </ViewToggleContainer>
-
-                            <Badge
+                                <PillButton
+                                    filled={viewMode === 'overall'}
+                                    onClick={() => setViewMode('overall')}
+                                >
+                                    Overall Report
+                                </PillButton>
+                                <PillButton
+                                    filled={viewMode === 'detailed'}
+                                    onClick={() => setViewMode('detailed')}
+                                >
+                                    Detailed Reports
+                                </PillButton>
+                            </ViewToggleContainer>                                <Badge
                                 color="primary"
                                 badgeContent=""
                                 variant="dot"
@@ -656,8 +651,8 @@ const EsgAgent: React.FC = () => {
                                     Filters
                                 </BoxButton>
                             </Badge>
-                        </TopBarActions>
-                    </TopBarContent>
+                        </HorizontalFlexbox>
+                    </HorizontalFlexbox>
                 </StickyTopBar>
 
                 <Popover
@@ -676,15 +671,20 @@ const EsgAgent: React.FC = () => {
                     </PopoverContainer>
                 </Popover>
 
-                <ContentArea style={{ flexDirection: viewMode === 'overall' ? 'column' : 'row', padding: viewMode === 'overall' ? '2rem' : '1.5rem' }}>
+                <ContentArea style={{
+                    flexDirection: viewMode === 'overall' ? 'column' : 'row',
+                    padding: viewMode === 'overall' ? '2rem' : '1.5rem',
+                    maxWidth: viewMode === 'overall' ? '1200px' : '100%',
+                    margin: viewMode === 'overall' ? '0 auto' : '0'
+                }}>
                     {fetchEsgMutation.isLoading ? (
-                        <CenteredDiv style={{ width: '100%' }}>
+                        <VerticalFlexbox style={{ alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>
                             <LoadingMessage>Fetching ESG data...</LoadingMessage>
-                        </CenteredDiv>
+                        </VerticalFlexbox>
                     ) : fetchEsgMutation.isError ? (
-                        <CenteredDiv style={{ width: '100%' }}>
+                        <VerticalFlexbox style={{ alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>
                             <SecondaryLabel>Error fetching ESG data</SecondaryLabel>
-                        </CenteredDiv>
+                        </VerticalFlexbox>
                     ) : fetchEsgMutation.data ? (
                         viewMode === 'overall' ? (
                             <OverallReportView reports={fetchEsgMutation.data.data} />
@@ -692,9 +692,9 @@ const EsgAgent: React.FC = () => {
                             <DetailedReportsView reports={fetchEsgMutation.data.data} />
                         )
                     ) : (
-                        <CenteredDiv style={{ width: '100%' }}>
+                        <VerticalFlexbox style={{ alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>
                             <SecondaryLabel>No ESG data available</SecondaryLabel>
-                        </CenteredDiv>
+                        </VerticalFlexbox>
                     )}
                 </ContentArea>
             </Container>
