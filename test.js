@@ -9,23 +9,17 @@ import { Badge, Popover } from '@mui/material';
 import useLocalStorage from "@utils/hooks/useLocalStorage";
 import BoxButton from "@components/atoms/BoxButton";
 import PillButton from "@components/atoms/PillButton";
-import LabelledToggleButton from "@components/atoms/Buttons/LabelledToggleButton";
+import StatusBox from "@components/atoms/StatusBox";
 import TuneIcon from '@mui/icons-material/Tune';
 import EsgCard from "./EsgCard";
 import EsgFilters, { ESG_DEFAULT_ARGS, ESG_DEFAULT_ARGS_STRINGIFIED } from "@components/organisms/ESG/EsgFilters";
 import { useFetchEsg } from "@utils/hooks/esg/useEsg";
 import LoadingMessage from "@components/atoms/LoadingMessage";
 
-//styles - Using project theme colors instead of hardcoded values
+// Minimal styled components - only what's absolutely necessary
 const PageContainer = styled.div`
   min-height: 100vh;
   background-color: ${(props) => props.theme.pageBg};
-`;
-
-const Container = styled.div`
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
 `;
 
 const StickyTopBar = styled.div`
@@ -40,272 +34,39 @@ const StickyTopBar = styled.div`
   box-shadow: ${(props) => props.theme.moduleShadow};
 `;
 
-const TopBarContent = styled.div`
+// Beautiful toggle container matching project design
+const ToggleContainer = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const TopBarTitle = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-`;
-
-const TopBarActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-`;
-
-const ViewToggleContainer = styled(HorizontalFlexbox)`
-  gap: 0.5rem;
-  padding: 0.25rem;
-  background: ${(props) => props.theme.cardBgSecondary};
+  background-color: ${(props) => props.theme.cardBgSecondary};
   border-radius: 8px;
   border: 1px solid ${(props) => props.theme.borderColor};
+  padding: 0.25rem;
+  box-shadow: ${(props) => props.theme.buttonShadow};
 `;
 
-const ContentArea = styled.div`
-  height: calc(100vh - 80px);
-  overflow-y: auto;
-  padding: 2rem;
-  background-color: ${(props) => props.theme.backgroundPrimary};
-  display: flex;
-  gap: 2rem;
-`;
-
-const Sidebar = styled.div`
-  width: 350px;
-  flex-shrink: 0;
-`;
-
-const MainContent = styled.div`
-  flex: 1;
-  overflow-y: auto;
-`;
-
-const PopoverContainer = styled.div`
-  padding: 1.5rem;
-  min-width: 350px;
-`;
-
-const ContentArea = styled.div`
-  height: calc(100vh - 80px);
-  overflow-y: auto;
-  padding: 2rem;
-  background-color: ${(props) => props.theme.backgroundPrimary};
-  display: flex;
-  gap: 2rem;
-`;
-
-const DetailedViewContainer = styled.div`
-  display: flex;
-  width: 100%;
-  gap: 2rem;
-`;
-
-const Sidebar = styled.div`
-  width: 350px;
-  flex-shrink: 0;
-`;
-
-const MainContent = styled.div`
-  flex: 1;
-  overflow-y: auto;
-`;
-
-const OverallReportContainer = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-`;
-
-const DetailedReportsGrid = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-`;
-
-const ReportCard = styled(RoundedBox)`
-  background: ${(props) => props.theme.cardBg};
-  border: 1px solid ${(props) => props.theme.borderColor};
-  transition: all 0.3s ease;
-  cursor: pointer;
-  
-  &:hover {
-    border-color: ${(props) => props.theme.primaryColor};
-    box-shadow: 0 8px 25px rgba(31, 117, 255, 0.15);
-    transform: translateY(-2px);
-    background: ${(props) => props.theme.cardBgFocus};
-  }
-`;
-
-const SidebarCard = styled(RoundedBox)`
-  background: ${(props) => props.theme.cardBg};
-  border: 1px solid ${(props) => props.theme.borderColor};
-  margin-bottom: 1rem;
-  padding: 1.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    border-color: ${(props) => props.theme.primaryColor};
-    box-shadow: 0 4px 12px rgba(31, 117, 255, 0.1);
-  }
-  
-  &.active {
-    border-color: ${(props) => props.theme.primaryColor};
-    background: ${(props) => props.theme.hoverColor};
-  }
-`;
-
-const SidebarTitle = styled(TextLabel)`
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: ${(props) => props.theme.textColor};
-  margin: 0 0 0.5rem 0;
-  line-height: 1.3;
-`;
-
-const SidebarMeta = styled(SecondaryLabel)`
-  font-size: 0.75rem;
-  color: ${(props) => props.theme.labelColor};
-  margin-bottom: 0.5rem;
-`;
-
-const SidebarPreview = styled.div`
-  font-size: 0.8rem;
-  color: ${(props) => props.theme.labelColorLight};
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-`;
-
-const ReportCardHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
-`;
-
-const ReportCardTitle = styled(TextLabel)`
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: ${(props) => props.theme.textColor};
-  margin: 0;
-`;
-
-const ReportCardMeta = styled(SecondaryLabel)`
-  font-size: 0.85rem;
-  color: ${(props) => props.theme.labelColorLight};
-  margin-bottom: 1rem;
-`;
-
-const ReportCardStats = styled.div`
-  display: flex;
-  justify-content: space-between;
-  padding-top: 1rem;
-  border-top: 1px solid ${(props) => props.theme.borderColor};
-  align-items: center;
-`;
-
-const StatItem = styled.div`
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  gap: 0.25rem;
-`;
-
-const StatLabel = styled.span`
-  font-size: 0.7rem;
-  color: ${(props) => props.theme.secondaryGrey};
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-`;
-
-const StatValue = styled.span`
+const ToggleButton = styled.button<{ active: boolean }>`
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
   font-size: 0.875rem;
-  font-weight: 700;
-  color: ${(props) => props.theme.textColor};
-`;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: ${({ active, theme }) =>
+        active ? theme.primaryColor : 'transparent'};
+  color: ${({ active, theme }) =>
+        active ? 'white' : theme.textColor};
+  box-shadow: ${({ active, theme }) =>
+        active ? theme.buttonShadow : 'none'};
 
-const CenteredDiv = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-`;
+  &:hover {
+    background-color: ${({ active, theme }) =>
+        active ? theme.primaryColor : theme.hoverColor};
+  }
 
-const PlaceholderContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  text-align: center;
-  color: ${(props) => props.theme.labelColorLight};
-  padding: 3rem;
-`;
-
-const PlaceholderIcon = styled.div`
-  font-size: 5rem;
-  margin-bottom: 2rem;
-  opacity: 0.3;
-  color: ${(props) => props.theme.primaryColor};
-`;
-
-const PlaceholderText = styled.div`
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: ${(props) => props.theme.textColor};
-`;
-
-const PlaceholderSubtext = styled.div`
-  font-size: 1.1rem;
-  opacity: 0.7;
-  max-width: 500px;
-  line-height: 1.6;
-  color: ${(props) => props.theme.labelColorLight};
-`;
-
-const PopoverContainer = styled.div`
-  padding: 1.5rem;
-  min-width: 350px;
-`;
-
-const PriorityBadge = styled.span<{ $priority: 'high' | 'medium' | 'low' }>`
-  padding: 0.375rem 1rem;
-  border-radius: ${(props) => props.theme.borderRadius};
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background-color: ${(props: any) => {
-        switch (props.$priority) {
-            case 'high': return props.theme.redBg;
-            case 'medium': return props.theme.orangeBg;
-            default: return props.theme.hoverColor;
-        }
-    }};
-  color: ${(props: any) => {
-        switch (props.$priority) {
-            case 'high': return props.theme.red;
-            case 'medium': return props.theme.orange;
-            default: return props.theme.primaryColor;
-        }
-    }};
-  border: 1px solid ${(props: any) => {
-        switch (props.$priority) {
-            case 'high': return props.theme.red;
-            case 'medium': return props.theme.orange;
-            default: return props.theme.primaryColor;
-        }
-    }};
+  &:first-child {
+    margin-right: 0.25rem;
+  }
 `;
 
 
@@ -331,7 +92,7 @@ interface GazetteReport {
 
 }
 
-// HealthScore Component - Using project atoms and theme colors
+// HealthScore Component - Using atoms
 const HealthScore: React.FC<{ score: number }> = ({ score }) => {
     const theme = useTheme();
     return (
@@ -344,7 +105,14 @@ const HealthScore: React.FC<{ score: number }> = ({ score }) => {
     );
 };
 
-// Updated components using project atoms - Restored sidebar layout
+// Helper function for priority badge
+const getPriorityVariant = (priority: string): 'red' | 'amber' | 'blue' => {
+    if (priority === 'high') return 'red';
+    if (priority === 'medium') return 'amber';
+    return 'blue';
+};
+
+// Detailed Reports View - Using atoms only
 const DetailedReportsView: React.FC<{
     reports: GazetteReport[];
 }> = ({ reports }) => {
@@ -386,17 +154,28 @@ const DetailedReportsView: React.FC<{
 
     if (availableReports.length === 0) {
         return (
-            <PlaceholderContent>
-                <PlaceholderIcon>📄</PlaceholderIcon>
-                <PlaceholderText>No Reports Available</PlaceholderText>
-                <PlaceholderSubtext>No regulatory reports found for the current period. Please check your filters or try again later.</PlaceholderSubtext>
-            </PlaceholderContent>
+            <VerticalFlexbox style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                textAlign: 'center',
+                color: theme.labelColorLight,
+                padding: '3rem'
+            }}>
+                <div style={{ fontSize: '5rem', marginBottom: '2rem', opacity: 0.3, color: theme.primaryColor }}>📄</div>
+                <TextLabel style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem', color: theme.textColor }}>
+                    No Reports Available
+                </TextLabel>
+                <SecondaryLabel style={{ fontSize: '1.1rem', opacity: 0.7, maxWidth: '500px', lineHeight: 1.6, color: theme.labelColorLight }}>
+                    No regulatory reports found for the current period. Please check your filters or try again later.
+                </SecondaryLabel>
+            </VerticalFlexbox>
         );
     }
 
     return (
         <HorizontalFlexbox style={{ width: '100%', gap: '2rem' }}>
-            <Sidebar>
+            <div style={{ width: '350px', flexShrink: 0 }}>
                 <TextLabel style={{ fontSize: '1.25rem', fontWeight: '700', color: theme.textColor, marginBottom: '1.5rem' }}>
                     Available Reports
                 </TextLabel>
@@ -422,9 +201,9 @@ const DetailedReportsView: React.FC<{
                                 <TextLabel style={{ fontSize: '0.9rem', fontWeight: '700', color: theme.textColor, margin: '0 0 0.5rem 0', lineHeight: '1.3' }}>
                                     {getReportTitle(report.reportType)}
                                 </TextLabel>
-                                <PriorityBadge $priority={getPriority(report.reportType)} style={{ fontSize: '0.6rem', padding: '0.25rem 0.5rem' }}>
+                                <StatusBox variant={getPriorityVariant(getPriority(report.reportType))}>
                                     {getReportType(report.reportType)}
-                                </PriorityBadge>
+                                </StatusBox>
                             </HorizontalFlexbox>
 
                             <SecondaryLabel style={{ fontSize: '0.75rem', color: theme.labelColor, marginBottom: '0.5rem' }}>
@@ -446,9 +225,9 @@ const DetailedReportsView: React.FC<{
                         </RoundedBox>
                     );
                 })}
-            </Sidebar>
+            </div>
 
-            <MainContent>
+            <div style={{ flex: 1, overflowY: 'auto' }}>
                 {selectedReport ? (
                     <RoundedBox style={{ padding: '2rem', height: 'fit-content' }}>
                         <div style={{ marginBottom: '2rem' }}>
@@ -474,9 +253,9 @@ const DetailedReportsView: React.FC<{
                                         </span>
                                     </HorizontalFlexbox>
                                 )}
-                                <PriorityBadge $priority={getPriority(selectedReport.reportType)}>
+                                <StatusBox variant={getPriorityVariant(getPriority(selectedReport.reportType))}>
                                     {getReportType(selectedReport.reportType)}
-                                </PriorityBadge>
+                                </StatusBox>
                             </HorizontalFlexbox>
                         </div>
 
@@ -487,13 +266,24 @@ const DetailedReportsView: React.FC<{
                         />
                     </RoundedBox>
                 ) : (
-                    <PlaceholderContent>
-                        <PlaceholderIcon>📄</PlaceholderIcon>
-                        <PlaceholderText>Select a Report</PlaceholderText>
-                        <PlaceholderSubtext>Choose a report from the sidebar to view its details.</PlaceholderSubtext>
-                    </PlaceholderContent>
+                    <VerticalFlexbox style={{
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        textAlign: 'center',
+                        color: theme.labelColorLight,
+                        padding: '3rem'
+                    }}>
+                        <div style={{ fontSize: '5rem', marginBottom: '2rem', opacity: 0.3, color: theme.primaryColor }}>📄</div>
+                        <TextLabel style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem', color: theme.textColor }}>
+                            Select a Report
+                        </TextLabel>
+                        <SecondaryLabel style={{ fontSize: '1.1rem', opacity: 0.7, maxWidth: '500px', lineHeight: 1.6, color: theme.labelColorLight }}>
+                            Choose a report from the sidebar to view its details.
+                        </SecondaryLabel>
+                    </VerticalFlexbox>
                 )}
-            </MainContent>
+            </div>
         </HorizontalFlexbox>
     );
 };
@@ -514,16 +304,27 @@ const OverallReportView: React.FC<{
 
     if (!overallReport) {
         return (
-            <PlaceholderContent>
-                <PlaceholderIcon>📊</PlaceholderIcon>
-                <PlaceholderText>No Overall Report Available</PlaceholderText>
-                <PlaceholderSubtext>No overall ESG report found. Please generate a report or try again later.</PlaceholderSubtext>
-            </PlaceholderContent>
+            <VerticalFlexbox style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                textAlign: 'center',
+                color: theme.labelColorLight,
+                padding: '3rem'
+            }}>
+                <div style={{ fontSize: '5rem', marginBottom: '2rem', opacity: 0.3, color: theme.primaryColor }}>📊</div>
+                <TextLabel style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem', color: theme.textColor }}>
+                    No Overall Report Available
+                </TextLabel>
+                <SecondaryLabel style={{ fontSize: '1.1rem', opacity: 0.7, maxWidth: '500px', lineHeight: 1.6, color: theme.labelColorLight }}>
+                    No overall ESG report found. Please generate a report or try again later.
+                </SecondaryLabel>
+            </VerticalFlexbox>
         );
     }
 
     return (
-        <OverallReportContainer>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
             <VerticalFlexbox style={{ gap: '1.5rem' }}>
                 <HorizontalFlexbox style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
@@ -560,7 +361,7 @@ const OverallReportView: React.FC<{
                     />
                 </RoundedBox>
             </VerticalFlexbox>
-        </OverallReportContainer>
+        </div>
     );
 };
 
@@ -613,7 +414,7 @@ const EsgAgent: React.FC = () => {
 
     return (
         <PageContainer>
-            <Container>
+            <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
                 <StickyTopBar>
                     <HorizontalFlexbox style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                         <HorizontalFlexbox style={{ alignItems: 'center', gap: '1.5rem' }}>
@@ -625,20 +426,21 @@ const EsgAgent: React.FC = () => {
                             </TextLabel>
                         </HorizontalFlexbox>
                         <HorizontalFlexbox style={{ alignItems: 'center', gap: '1rem' }}>
-                            <ViewToggleContainer>
-                                <PillButton
-                                    filled={viewMode === 'overall'}
+                            <ToggleContainer>
+                                <ToggleButton
+                                    active={viewMode === 'overall'}
                                     onClick={() => setViewMode('overall')}
                                 >
                                     Overall Report
-                                </PillButton>
-                                <PillButton
-                                    filled={viewMode === 'detailed'}
+                                </ToggleButton>
+                                <ToggleButton
+                                    active={viewMode === 'detailed'}
                                     onClick={() => setViewMode('detailed')}
                                 >
                                     Detailed Reports
-                                </PillButton>
-                            </ViewToggleContainer>                                <Badge
+                                </ToggleButton>
+                            </ToggleContainer>
+                            <Badge
                                 color="primary"
                                 badgeContent=""
                                 variant="dot"
@@ -666,20 +468,24 @@ const EsgAgent: React.FC = () => {
                         horizontal: 'left',
                     }}
                 >
-                    <PopoverContainer>
+                    <div style={{ padding: '1.5rem', minWidth: '300px', backgroundColor: theme.cardBg }}>
                         <EsgFilters args={argsToPropagate} onChange={handleArgs} handleGenereateReport={handleGenereateReport} />
-                    </PopoverContainer>
+                    </div>
                 </Popover>
 
-                <ContentArea style={{
+                <div style={{
+                    flex: 1,
+                    display: 'flex',
                     flexDirection: viewMode === 'overall' ? 'column' : 'row',
                     padding: viewMode === 'overall' ? '2rem' : '1.5rem',
                     maxWidth: viewMode === 'overall' ? '1200px' : '100%',
-                    margin: viewMode === 'overall' ? '0 auto' : '0'
+                    margin: viewMode === 'overall' ? '0 auto' : '0',
+                    width: '100%',
+                    overflow: 'auto'
                 }}>
                     {fetchEsgMutation.isLoading ? (
                         <VerticalFlexbox style={{ alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>
-                            <LoadingMessage>Fetching ESG data...</LoadingMessage>
+                            <SecondaryLabel style={{ color: theme.primaryColor, fontSize: '1.1rem' }}>Fetching ESG data...</SecondaryLabel>
                         </VerticalFlexbox>
                     ) : fetchEsgMutation.isError ? (
                         <VerticalFlexbox style={{ alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}>
@@ -696,8 +502,8 @@ const EsgAgent: React.FC = () => {
                             <SecondaryLabel>No ESG data available</SecondaryLabel>
                         </VerticalFlexbox>
                     )}
-                </ContentArea>
-            </Container>
+                </div>
+            </div>
         </PageContainer>
     );
 };
