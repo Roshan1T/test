@@ -1553,3 +1553,85 @@ class DpoAgentService:
             
         except Exception as e:
             logger.error(f"Error updating report status: {str(e)}")
+
+
+
+
+ def _get_agent_jurisdictions(session, agent_id: int) -> List:
+        """Get agent jurisdiction names"""
+        try:
+            JurisdictionsTable = Table('dpo_agent_jurisdictions', db.metadata, autoload=True)
+            JurisdictionMasterTable = Table('jurisdictions', db.metadata, autoload=True)
+            
+            query = select(JurisdictionMasterTable.c.name).select_from(
+                JurisdictionsTable.join(
+                    JurisdictionMasterTable, 
+                    JurisdictionsTable.c.jurisdiction_id == JurisdictionMasterTable.c.id
+                )
+            ).where(JurisdictionsTable.c.dpo_agent_id == agent_id)
+            
+            results = session.execute(query).fetchall()
+            return [row.name for row in results]
+        except Exception as e:
+            logger.error(f"Error getting agent jurisdictions: {str(e)}")
+            return []
+
+    @staticmethod
+    def _get_agent_industries(session, agent_id: int) -> List:
+        """Get agent industry names"""
+        try:
+            IndustriesTable = Table('dpo_agent_industries', db.metadata, autoload=True)
+            IndustryMasterTable = Table('industries', db.metadata, autoload=True)
+            
+            query = select(IndustryMasterTable.c.name).select_from(
+                IndustriesTable.join(
+                    IndustryMasterTable, 
+                    IndustriesTable.c.industry_id == IndustryMasterTable.c.id
+                )
+            ).where(IndustriesTable.c.dpo_agent_id == agent_id)
+            
+            results = session.execute(query).fetchall()
+            return [row.name for row in results]
+        except Exception as e:
+            logger.error(f"Error getting agent industries: {str(e)}")
+            return []
+
+    @staticmethod
+    def _get_agent_regulations(session, agent_id: int) -> List:
+        """Get agent regulation names"""
+        try:
+            RegulationsTable = Table('dpo_agent_regulations', db.metadata, autoload=True)
+            RegulationMasterTable = Table('regulations', db.metadata, autoload=True)
+            
+            query = select(RegulationMasterTable.c.name).select_from(
+                RegulationsTable.join(
+                    RegulationMasterTable, 
+                    RegulationsTable.c.regulation_id == RegulationMasterTable.c.id
+                )
+            ).where(RegulationsTable.c.dpo_agent_id == agent_id)
+            
+            results = session.execute(query).fetchall()
+            return [row.name for row in results]
+        except Exception as e:
+            logger.error(f"Error getting agent regulations: {str(e)}")
+            return []
+
+    @staticmethod
+    def _get_agent_regulators(session, agent_id: int) -> List:
+        """Get agent regulator names"""
+        try:
+            RegulatorsTable = Table('dpo_agent_regulators', db.metadata, autoload=True)
+            RegulatorMasterTable = Table('regulators', db.metadata, autoload=True)
+            
+            query = select(RegulatorMasterTable.c.name).select_from(
+                RegulatorsTable.join(
+                    RegulatorMasterTable, 
+                    RegulatorsTable.c.regulator_id == RegulatorMasterTable.c.id
+                )
+            ).where(RegulatorsTable.c.dpo_agent_id == agent_id)
+            
+            results = session.execute(query).fetchall()
+            return [row.name for row in results]
+        except Exception as e:
+            logger.error(f"Error getting agent regulators: {str(e)}")
+            return []
